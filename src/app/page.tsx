@@ -38,6 +38,7 @@ interface ItemCarrinho {
   produtoId: number
   quantidade: number
   precoUnitario: number
+  precoComDesconto: number
 }
 
 interface Venda {
@@ -47,6 +48,7 @@ interface Venda {
   data: string
   quantidade: number
   precoUnitario: number
+  precoComDesconto: number
   valorTotal: number
   formaPagamento: string
   observacoes: string
@@ -96,6 +98,11 @@ export default function ControleClientesVendas() {
     tipo: 'vendedor' as 'admin' | 'vendedor'
   })
 
+  // Estados para filtros de relatórios (vendedor)
+  const [dataInicialRelatorio, setDataInicialRelatorio] = useState<string>(new Date().toISOString().split('T')[0])
+  const [dataFinalRelatorio, setDataFinalRelatorio] = useState<string>(new Date().toISOString().split('T')[0])
+  const [filtroAtivoRelatorio, setFiltroAtivoRelatorio] = useState<'hoje' | 'ontem' | 'semana' | 'mes' | 'personalizado'>('hoje')
+
   // Estados para adicionar vendedor (admin)
   const [mostrarAdicionarVendedor, setMostrarAdicionarVendedor] = useState(false)
   const [novoVendedor, setNovoVendedor] = useState({
@@ -135,13 +142,30 @@ export default function ControleClientesVendas() {
   const [dataFinalFechamento, setDataFinalFechamento] = useState<string>(new Date().toISOString().split('T')[0])
 
   // Estados para controle de estoque do vendedor
-  const [estoqueVendedores, setEstoqueVendedores] = useState<EstoqueVendedor[]>([])
+  const [estoqueVendedores, setEstoqueVendedores] = useState<EstoqueVendedor[]>([
+    {
+      id: 1,
+      vendedorId: 4,
+      vendedorNome: 'Welton Silva',
+      produtoId: 1,
+      produtoNome: 'Pacote Premium',
+      quantidadeLevada: 30,
+      quantidadeVendida: 28,
+      quantidadeDevolver: 2,
+      data: new Date().toISOString().split('T')[0],
+      status: 'ativo'
+    }
+  ])
   const [mostrarControleEstoque, setMostrarControleEstoque] = useState(false)
   const [novoEstoque, setNovoEstoque] = useState({
     vendedorId: 0,
     produtoId: 0,
     quantidadeLevada: 0
   })
+
+  // Estados para edição de produtos (admin)
+  const [produtoEditando, setProdutoEditando] = useState<Produto | null>(null)
+  const [dadosEdicaoProduto, setDadosEdicaoProduto] = useState<Produto | null>(null)
 
   // Estados para configuração do banco
   const [mostrarConfigBanco, setMostrarConfigBanco] = useState(false)
@@ -150,7 +174,7 @@ export default function ControleClientesVendas() {
   // Estados para carrinho de compras
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([])
 
-  // Usuários do sistema - LIMPOS E SUBSTITUÍDOS POR 15 VENDEDORES ATIVOS
+  // Usuários do sistema
   const [usuarios, setUsuarios] = useState<Usuario[]>([
     {
       id: 1,
@@ -163,8 +187,8 @@ export default function ControleClientesVendas() {
     },
     {
       id: 2,
-      nome: 'Vendedor 01',
-      email: 'vendedor01@vendas.com',
+      nome: 'João Silva',
+      email: 'joao@vendas.com',
       senha: '123456',
       tipo: 'vendedor',
       ativo: true,
@@ -174,155 +198,23 @@ export default function ControleClientesVendas() {
     },
     {
       id: 3,
-      nome: 'Vendedor 02',
-      email: 'vendedor02@vendas.com',
-      senha: '123456',
-      tipo: 'vendedor',
-      ativo: true,
-      dataRegistro: '2024-01-16',
-      criadoPor: 'Admin',
-      comissao: 6
-    },
-    {
-      id: 4,
-      nome: 'Vendedor 03',
-      email: 'vendedor03@vendas.com',
-      senha: '123456',
-      tipo: 'vendedor',
-      ativo: true,
-      dataRegistro: '2024-01-17',
-      criadoPor: 'Admin',
-      comissao: 5.5
-    },
-    {
-      id: 5,
-      nome: 'Vendedor 04',
-      email: 'vendedor04@vendas.com',
-      senha: '123456',
-      tipo: 'vendedor',
-      ativo: true,
-      dataRegistro: '2024-01-18',
-      criadoPor: 'Admin',
-      comissao: 7
-    },
-    {
-      id: 6,
-      nome: 'Vendedor 05',
-      email: 'vendedor05@vendas.com',
-      senha: '123456',
-      tipo: 'vendedor',
-      ativo: true,
-      dataRegistro: '2024-01-19',
-      criadoPor: 'Admin',
-      comissao: 6.5
-    },
-    {
-      id: 7,
-      nome: 'Vendedor 06',
-      email: 'vendedor06@vendas.com',
+      nome: 'Maria Santos',
+      email: 'maria@vendas.com',
       senha: '123456',
       tipo: 'vendedor',
       ativo: true,
       dataRegistro: '2024-01-20',
       criadoPor: 'Admin',
-      comissao: 5
-    },
-    {
-      id: 8,
-      nome: 'Vendedor 07',
-      email: 'vendedor07@vendas.com',
-      senha: '123456',
-      tipo: 'vendedor',
-      ativo: true,
-      dataRegistro: '2024-01-21',
-      criadoPor: 'Admin',
-      comissao: 6
-    },
-    {
-      id: 9,
-      nome: 'Vendedor 08',
-      email: 'vendedor08@vendas.com',
-      senha: '123456',
-      tipo: 'vendedor',
-      ativo: true,
-      dataRegistro: '2024-01-22',
-      criadoPor: 'Admin',
-      comissao: 5.5
-    },
-    {
-      id: 10,
-      nome: 'Vendedor 09',
-      email: 'vendedor09@vendas.com',
-      senha: '123456',
-      tipo: 'vendedor',
-      ativo: true,
-      dataRegistro: '2024-01-23',
-      criadoPor: 'Admin',
       comissao: 7
     },
     {
-      id: 11,
-      nome: 'Vendedor 10',
-      email: 'vendedor10@vendas.com',
-      senha: '123456',
-      tipo: 'vendedor',
-      ativo: true,
-      dataRegistro: '2024-01-24',
-      criadoPor: 'Admin',
-      comissao: 6
-    },
-    {
-      id: 12,
-      nome: 'Vendedor 11',
-      email: 'vendedor11@vendas.com',
+      id: 4,
+      nome: 'Welton Silva',
+      email: 'welton@vendas.com',
       senha: '123456',
       tipo: 'vendedor',
       ativo: true,
       dataRegistro: '2024-01-25',
-      criadoPor: 'Admin',
-      comissao: 5.5
-    },
-    {
-      id: 13,
-      nome: 'Vendedor 12',
-      email: 'vendedor12@vendas.com',
-      senha: '123456',
-      tipo: 'vendedor',
-      ativo: true,
-      dataRegistro: '2024-01-26',
-      criadoPor: 'Admin',
-      comissao: 6.5
-    },
-    {
-      id: 14,
-      nome: 'Vendedor 13',
-      email: 'vendedor13@vendas.com',
-      senha: '123456',
-      tipo: 'vendedor',
-      ativo: true,
-      dataRegistro: '2024-01-27',
-      criadoPor: 'Admin',
-      comissao: 7
-    },
-    {
-      id: 15,
-      nome: 'Vendedor 14',
-      email: 'vendedor14@vendas.com',
-      senha: '123456',
-      tipo: 'vendedor',
-      ativo: true,
-      dataRegistro: '2024-01-28',
-      criadoPor: 'Admin',
-      comissao: 5
-    },
-    {
-      id: 16,
-      nome: 'Vendedor 15',
-      email: 'vendedor15@vendas.com',
-      senha: '123456',
-      tipo: 'vendedor',
-      ativo: true,
-      dataRegistro: '2024-01-29',
       criadoPor: 'Admin',
       comissao: 6
     }
@@ -343,7 +235,7 @@ export default function ControleClientesVendas() {
       latitude: -23.5505,
       longitude: -46.6333,
       diasVisita: ["Segunda", "Quarta", "Sexta"],
-      vendedorResponsavel: "Vendedor 01",
+      vendedorResponsavel: "João Silva",
       observacoes: "Cliente preferencial, sempre paga em dia",
       ultimaCompra: "2024-01-15",
       valorUltimaCompra: 250.00,
@@ -364,7 +256,7 @@ export default function ControleClientesVendas() {
       latitude: -23.5489,
       longitude: -46.6388,
       diasVisita: ["Terça", "Quinta"],
-      vendedorResponsavel: "Vendedor 02",
+      vendedorResponsavel: "Maria Santos",
       observacoes: "Gosta de produtos premium",
       ultimaCompra: "2024-01-18",
       valorUltimaCompra: 180.00,
@@ -385,7 +277,7 @@ export default function ControleClientesVendas() {
       latitude: -23.5520,
       longitude: -46.6300,
       diasVisita: ["Segunda", "Quinta", "Sábado"],
-      vendedorResponsavel: "Vendedor 03",
+      vendedorResponsavel: "Welton Silva",
       observacoes: "Pedidos grandes aos sábados",
       ultimaCompra: "2024-01-20",
       valorUltimaCompra: 320.00,
@@ -406,7 +298,7 @@ export default function ControleClientesVendas() {
       latitude: -23.5470,
       longitude: -46.6420,
       diasVisita: ["Quarta", "Sexta"],
-      vendedorResponsavel: "Vendedor 04",
+      vendedorResponsavel: "João Silva",
       observacoes: "Sempre negocia preços, bom pagador",
       ultimaCompra: "2024-01-22",
       valorUltimaCompra: 450.00,
@@ -427,7 +319,7 @@ export default function ControleClientesVendas() {
       latitude: -23.5530,
       longitude: -46.6280,
       diasVisita: ["Terça", "Quinta", "Sábado"],
-      vendedorResponsavel: "Vendedor 05",
+      vendedorResponsavel: "Maria Santos",
       observacoes: "Prefere entregas pela manhã",
       ultimaCompra: "2024-01-25",
       valorUltimaCompra: 195.00,
@@ -487,11 +379,12 @@ export default function ControleClientesVendas() {
       data: "2024-01-15",
       quantidade: 5,
       precoUnitario: 50.00,
+      precoComDesconto: 50.00,
       valorTotal: 250.00,
       formaPagamento: "Dinheiro",
       observacoes: "Entrega realizada com sucesso",
       status: "Concluída",
-      vendedorResponsavel: "Vendedor 01",
+      vendedorResponsavel: "João Silva",
       statusPagamento: "Pago"
     },
     {
@@ -501,84 +394,13 @@ export default function ControleClientesVendas() {
       data: "2024-01-18",
       quantidade: 7,
       precoUnitario: 25.00,
+      precoComDesconto: 25.00,
       valorTotal: 175.00,
       formaPagamento: "PIX",
       observacoes: "Cliente satisfeito",
       status: "Concluída",
-      vendedorResponsavel: "Vendedor 02",
+      vendedorResponsavel: "Maria Santos",
       statusPagamento: "Pago"
-    },
-    {
-      id: 3,
-      clienteId: 3,
-      produtoId: 1,
-      data: "2024-01-20",
-      quantidade: 6,
-      precoUnitario: 50.00,
-      valorTotal: 300.00,
-      formaPagamento: "Nota Feita",
-      observacoes: "Pagamento em 30 dias",
-      status: "Concluída",
-      vendedorResponsavel: "Vendedor 03",
-      numeroNota: "NF-2024-001",
-      statusPagamento: "Pendente"
-    },
-    {
-      id: 4,
-      clienteId: 4,
-      produtoId: 3,
-      data: "2024-01-22",
-      quantidade: 15,
-      precoUnitario: 15.00,
-      valorTotal: 225.00,
-      formaPagamento: "Boleto",
-      observacoes: "Entrega agendada",
-      status: "Concluída",
-      vendedorResponsavel: "Vendedor 04",
-      statusPagamento: "Pago"
-    },
-    {
-      id: 5,
-      clienteId: 5,
-      produtoId: 4,
-      data: "2024-01-25",
-      quantidade: 20,
-      precoUnitario: 8.50,
-      valorTotal: 170.00,
-      formaPagamento: "Dinheiro",
-      observacoes: "Produto muito bem aceito",
-      status: "Concluída",
-      vendedorResponsavel: "Vendedor 05",
-      statusPagamento: "Pago"
-    },
-    {
-      id: 6,
-      clienteId: 1,
-      produtoId: 5,
-      data: new Date().toISOString().split('T')[0],
-      quantidade: 10,
-      precoUnitario: 3.20,
-      valorTotal: 32.00,
-      formaPagamento: "PIX",
-      observacoes: "Venda do dia",
-      status: "Concluída",
-      vendedorResponsavel: "Vendedor 01",
-      statusPagamento: "Pago"
-    },
-    {
-      id: 7,
-      clienteId: 2,
-      produtoId: 2,
-      data: new Date().toISOString().split('T')[0],
-      quantidade: 3,
-      precoUnitario: 25.00,
-      valorTotal: 75.00,
-      formaPagamento: "Nota Feita",
-      observacoes: "Pagamento em 15 dias",
-      status: "Concluída",
-      vendedorResponsavel: "Vendedor 02",
-      numeroNota: "NF-2024-002",
-      statusPagamento: "Pendente"
     }
   ])
 
@@ -656,6 +478,91 @@ export default function ControleClientesVendas() {
     localStorage.setItem('sistemaVendas', JSON.stringify(dados))
   }, [usuarios, clientes, produtos, vendas, estoqueVendedores])
 
+  // Função para aplicar filtros rápidos de data
+  const aplicarFiltroRapido = (filtro: 'hoje' | 'ontem' | 'semana' | 'mes') => {
+    const hoje = new Date()
+    let dataInicial = new Date()
+    let dataFinal = new Date()
+
+    switch (filtro) {
+      case 'hoje':
+        dataInicial = hoje
+        dataFinal = hoje
+        break
+      case 'ontem':
+        dataInicial = new Date(hoje.setDate(hoje.getDate() - 1))
+        dataFinal = dataInicial
+        break
+      case 'semana':
+        dataInicial = new Date(hoje.setDate(hoje.getDate() - 7))
+        dataFinal = new Date()
+        break
+      case 'mes':
+        dataInicial = new Date(hoje.setMonth(hoje.getMonth() - 1))
+        dataFinal = new Date()
+        break
+    }
+
+    setDataInicialRelatorio(dataInicial.toISOString().split('T')[0])
+    setDataFinalRelatorio(dataFinal.toISOString().split('T')[0])
+    setFiltroAtivoRelatorio(filtro)
+  }
+
+  // Função para obter vendas do vendedor logado por período
+  const obterVendasVendedorPorPeriodo = (dataInicial: string, dataFinal: string) => {
+    if (!usuarioLogado || usuarioLogado.tipo !== 'vendedor') return []
+    
+    return vendas.filter(venda => 
+      venda.vendedorResponsavel === usuarioLogado.nome && 
+      venda.data >= dataInicial && 
+      venda.data <= dataFinal
+    )
+  }
+
+  // Função para calcular totais por forma de pagamento (vendedor por período)
+  const calcularTotaisPorPagamentoVendedorPeriodo = (dataInicial: string, dataFinal: string) => {
+    const vendasDoPeriodo = obterVendasVendedorPorPeriodo(dataInicial, dataFinal)
+    const totais: { [key: string]: { quantidade: number, valor: number } } = {}
+    
+    formasPagamento.forEach(forma => {
+      totais[forma] = { quantidade: 0, valor: 0 }
+    })
+    
+    vendasDoPeriodo.forEach(venda => {
+      if (totais[venda.formaPagamento]) {
+        totais[venda.formaPagamento].quantidade += venda.quantidade
+        totais[venda.formaPagamento].valor += venda.valorTotal
+      }
+    })
+    
+    return totais
+  }
+
+  // Função para iniciar edição de produto (admin)
+  const iniciarEdicaoProduto = (produto: Produto) => {
+    if (usuarioLogado?.tipo !== 'admin') return
+    setProdutoEditando(produto)
+    setDadosEdicaoProduto({...produto})
+  }
+
+  // Função para salvar edição de produto
+  const salvarEdicaoProduto = () => {
+    if (!produtoEditando || !dadosEdicaoProduto || usuarioLogado?.tipo !== 'admin') return
+
+    if (!dadosEdicaoProduto.nome || dadosEdicaoProduto.preco <= 0) {
+      alert('Nome e preço são obrigatórios e o preço deve ser maior que zero')
+      return
+    }
+
+    setProdutos(produtos.map(p => 
+      p.id === produtoEditando.id ? dadosEdicaoProduto : p
+    ))
+
+    setProdutoEditando(null)
+    setDadosEdicaoProduto(null)
+    alert('Produto atualizado com sucesso!')
+  }
+
   // Função para obter vendas do dia atual do vendedor logado
   const obterVendasDoDia = () => {
     if (!usuarioLogado || usuarioLogado.tipo !== 'vendedor') return []
@@ -685,11 +592,22 @@ export default function ControleClientesVendas() {
     )
   }
 
-  // Função para obter notas a receber
+  // Função para obter notas a receber (todas para admin)
   const obterNotasAReceber = () => {
     return vendas.filter(venda => 
       venda.formaPagamento === 'Nota Feita' && 
       venda.statusPagamento === 'Pendente'
+    )
+  }
+
+  // Função para obter notas a receber do vendedor logado
+  const obterNotasAReceberVendedor = () => {
+    if (!usuarioLogado || usuarioLogado.tipo !== 'vendedor') return []
+    
+    return vendas.filter(venda => 
+      venda.formaPagamento === 'Nota Feita' && 
+      venda.statusPagamento === 'Pendente' &&
+      venda.vendedorResponsavel === usuarioLogado.nome
     )
   }
 
@@ -857,7 +775,7 @@ export default function ControleClientesVendas() {
     alert('Estoque adicionado com sucesso!')
   }
 
-  // Funções do carrinho
+  // Funções do carrinho com desconto
   const adicionarAoCarrinho = (produtoId: number) => {
     const produto = produtos.find(p => p.id === produtoId)
     if (!produto) return
@@ -874,7 +792,8 @@ export default function ControleClientesVendas() {
       setCarrinho([...carrinho, {
         produtoId,
         quantidade: 1,
-        precoUnitario: produto.preco
+        precoUnitario: produto.preco,
+        precoComDesconto: produto.preco
       }])
     }
   }
@@ -893,13 +812,11 @@ export default function ControleClientesVendas() {
     }
   }
 
-  // NOVA FUNÇÃO: Atualizar preço unitário no carrinho
-  const atualizarPrecoCarrinho = (produtoId: number, novoPreco: number) => {
-    if (novoPreco < 0) return // Não permitir preços negativos
-    
+  // Nova função para alterar preço com desconto no carrinho
+  const alterarPrecoCarrinho = (produtoId: number, novoPreco: number) => {
     setCarrinho(carrinho.map(item => 
       item.produtoId === produtoId 
-        ? { ...item, precoUnitario: novoPreco }
+        ? { ...item, precoComDesconto: novoPreco }
         : item
     ))
   }
@@ -909,7 +826,7 @@ export default function ControleClientesVendas() {
   }
 
   const calcularTotalCarrinho = () => {
-    return carrinho.reduce((total, item) => total + (item.quantidade * item.precoUnitario), 0)
+    return carrinho.reduce((total, item) => total + (item.quantidade * item.precoComDesconto), 0)
   }
 
   // Função para registrar venda com múltiplos produtos
@@ -932,7 +849,8 @@ export default function ControleClientesVendas() {
       data: novaVenda.data,
       quantidade: item.quantidade,
       precoUnitario: item.precoUnitario,
-      valorTotal: item.quantidade * item.precoUnitario,
+      precoComDesconto: item.precoComDesconto,
+      valorTotal: item.quantidade * item.precoComDesconto,
       formaPagamento: novaVenda.formaPagamento,
       observacoes: novaVenda.observacoes,
       status: 'Concluída',
@@ -981,17 +899,21 @@ export default function ControleClientesVendas() {
     alert('Venda registrada com sucesso!')
   }
 
-  // Função de login CORRIGIDA - Bug de acesso dos vendedores
+  // Função de login simples
   const fazerLogin = () => {
     const usuario = usuarios.find(u => 
       u.email === dadosLogin.email && 
       u.senha === dadosLogin.senha && 
-      u.tipo === tipoLogin &&
-      u.ativo === true // CORREÇÃO: Verificar se está ativo
+      u.tipo === tipoLogin
     )
 
     if (!usuario) {
-      alert('Email, senha incorretos ou conta inativa. Verifique suas credenciais.')
+      alert('Email ou senha incorretos')
+      return
+    }
+
+    if (usuario.tipo === 'vendedor' && !usuario.ativo) {
+      alert('Sua conta foi desativada. Entre em contato com o administrador.')
       return
     }
 
@@ -1001,7 +923,7 @@ export default function ControleClientesVendas() {
     setStatusBanco('conectado')
   }
 
-  // Função para criar conta CORRIGIDA - Bug de ativação automática
+  // Função para criar conta
   const criarConta = () => {
     if (!dadosCriarConta.nome || !dadosCriarConta.email || !dadosCriarConta.senha) {
       alert('Todos os campos são obrigatórios')
@@ -1024,7 +946,7 @@ export default function ControleClientesVendas() {
       email: dadosCriarConta.email,
       senha: dadosCriarConta.senha,
       tipo: dadosCriarConta.tipo,
-      ativo: true, // CORREÇÃO: Agora todos ficam ativos automaticamente
+      ativo: dadosCriarConta.tipo === 'admin' ? true : false,
       dataRegistro: new Date().toISOString().split('T')[0],
       comissao: dadosCriarConta.tipo === 'vendedor' ? 5 : undefined
     }
@@ -1033,7 +955,11 @@ export default function ControleClientesVendas() {
     setDadosCriarConta({ nome: '', email: '', senha: '', confirmarSenha: '', tipo: 'vendedor' })
     setMostrarCriarConta(false)
     
-    alert(`Conta criada com sucesso! Você já pode fazer login.`)
+    if (dadosCriarConta.tipo === 'admin') {
+      alert('Conta de administrador criada com sucesso!')
+    } else {
+      alert('Conta criada com sucesso! Aguarde a ativação pelo administrador.')
+    }
   }
 
   // Função de logout
@@ -1044,7 +970,7 @@ export default function ControleClientesVendas() {
     setStatusBanco('desconectado')
   }
 
-  // Função para adicionar vendedor CORRIGIDA (apenas admin)
+  // Função para adicionar vendedor (apenas admin)
   const adicionarVendedor = () => {
     if (usuarioLogado?.tipo !== 'admin') return
     
@@ -1064,7 +990,7 @@ export default function ControleClientesVendas() {
       email: novoVendedor.email,
       senha: novoVendedor.senha,
       tipo: 'vendedor',
-      ativo: true, // CORREÇÃO: Vendedor criado pelo admin já fica ativo
+      ativo: true,
       dataRegistro: new Date().toISOString().split('T')[0],
       criadoPor: usuarioLogado.nome,
       comissao: novoVendedor.comissao
@@ -1073,7 +999,7 @@ export default function ControleClientesVendas() {
     setUsuarios([...usuarios, vendedor])
     setNovoVendedor({ nome: '', email: '', senha: '', comissao: 5 })
     setMostrarAdicionarVendedor(false)
-    alert(`Vendedor ${vendedor.nome} adicionado com sucesso!\nEmail: ${vendedor.email}\nSenha: ${vendedor.senha}\nStatus: ATIVO - Pode fazer login imediatamente`)
+    alert(`Vendedor ${vendedor.nome} adicionado com sucesso!\nEmail: ${vendedor.email}\nSenha: ${vendedor.senha}`)
   }
 
   // Função para alternar status do vendedor (apenas admin)
@@ -1139,7 +1065,7 @@ export default function ControleClientesVendas() {
     setConfirmarNovaSenha('')
   }
 
-  // Função para trocar senha do vendedor (admin) - CORRIGIDA
+  // Função para trocar senha do vendedor (admin)
   const trocarSenhaVendedor = () => {
     if (!vendedorTrocandoSenha || usuarioLogado?.tipo !== 'admin') return
 
@@ -1153,24 +1079,16 @@ export default function ControleClientesVendas() {
       return
     }
 
-    // CORREÇÃO: Usar função de callback para garantir que o estado seja atualizado corretamente
-    setUsuarios(usuariosAtuais => 
-      usuariosAtuais.map(u => 
-        u.id === vendedorTrocandoSenha.id 
-          ? { ...u, senha: novaSenhaVendedor }
-          : u
-      )
-    )
+    setUsuarios(usuarios.map(u => 
+      u.id === vendedorTrocandoSenha.id 
+        ? { ...u, senha: novaSenhaVendedor }
+        : u
+    ))
 
-    // Limpar estados
-    const nomeVendedor = vendedorTrocandoSenha.nome
-    const novaSenha = novaSenhaVendedor
-    
     setVendedorTrocandoSenha(null)
     setNovaSenhaVendedor('')
     setConfirmarNovaSenha('')
-    
-    alert(`Senha do vendedor ${nomeVendedor} alterada com sucesso!\nNova senha: ${novaSenha}`)
+    alert(`Senha do vendedor ${vendedorTrocandoSenha.nome} alterada com sucesso!\nNova senha: ${novaSenhaVendedor}`)
   }
 
   // Função para excluir vendedor
@@ -1318,7 +1236,7 @@ export default function ControleClientesVendas() {
   }
 
   // Cores para os cartões dos dias
-  const coresDias = {
+  const coresDias: { [key: string]: string } = {
     'Segunda': 'from-blue-500 to-blue-600',
     'Terça': 'from-green-500 to-green-600',
     'Quarta': 'from-yellow-500 to-yellow-600',
@@ -1449,7 +1367,8 @@ export default function ControleClientesVendas() {
     ...(usuarioLogado?.tipo === 'vendedor' ? [
       { id: 'perfilVendedor', label: 'Meu Perfil', icon: TrendingUp },
       { id: 'fechamentoDia', label: 'Fechamento do Dia', icon: Clock },
-      { id: 'controleEstoque', label: 'Meu Estoque', icon: Package }
+      { id: 'controleEstoque', label: 'Meu Estoque', icon: Package },
+      { id: 'notasReceber', label: 'Notas a Receber', icon: FileText }
     ] : []),
   ]
 
@@ -1533,23 +1452,6 @@ export default function ControleClientesVendas() {
                 >
                   <UserPlus className="w-4 h-4" />
                   Criar Conta
-                </button>
-                
-                <div className="text-center">
-                  <span className="text-gray-500 text-sm">ou</span>
-                </div>
-                
-                <button
-                  onClick={() => alert('Funcionalidade em desenvolvimento')}
-                  className="w-full flex items-center justify-center gap-2 border-2 border-gray-300 text-gray-700 py-3 px-4 rounded-xl font-medium hover:bg-gray-50 transition-all"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                  </svg>
-                  Entrar com Google
                 </button>
               </div>
             </>
@@ -1648,7 +1550,10 @@ export default function ControleClientesVendas() {
               </button>
 
               <p className="text-xs text-gray-500 text-center mt-4">
-                Sua conta será ativada automaticamente e você poderá fazer login imediatamente.
+                {dadosCriarConta.tipo === 'admin' 
+                  ? 'Sua conta de administrador será ativada imediatamente.'
+                  : 'Sua conta será criada como vendedor e precisará ser ativada pelo administrador.'
+                }
               </p>
             </div>
           )}
@@ -1708,7 +1613,7 @@ export default function ControleClientesVendas() {
           </button>
         </div>
         
-        <nav className="mt-6">
+        <nav className="mt-6 overflow-y-auto max-h-[calc(100vh-250px)]">
           {menuItems.map((item) => {
             const Icon = item.icon
             return (
@@ -1720,6 +1625,10 @@ export default function ControleClientesVendas() {
                   setDiaSelecionado(null)
                   setVendedorSelecionado('')
                   setVendedorFechamento('')
+                  // Resetar filtros ao entrar em relatórios
+                  if (item.id === 'relatorios') {
+                    aplicarFiltroRapido('hoje')
+                  }
                 }}
                 className={`w-full flex items-center px-6 py-3 text-left transition-colors ${
                   abaSelecionada === item.id
@@ -1727,8 +1636,8 @@ export default function ControleClientesVendas() {
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                <Icon className="w-5 h-5 mr-3" />
-                {item.label}
+                <Icon className="w-5 h-5 mr-3 flex-shrink-0" />
+                <span className="text-sm">{item.label}</span>
               </button>
             )
           })}
@@ -1744,9 +1653,9 @@ export default function ControleClientesVendas() {
       )}
 
       {/* Conteúdo Principal */}
-      <div className="flex-1 lg:ml-0">
+      <div className="flex-1 lg:ml-0 overflow-auto">
         {/* Header Mobile */}
-        <div className="lg:hidden bg-white shadow-sm border-b px-4 py-3">
+        <div className="lg:hidden bg-white shadow-sm border-b px-4 py-3 sticky top-0 z-30">
           <div className="flex items-center justify-between">
             <button
               onClick={() => setSidebarAberta(true)}
@@ -1840,13 +1749,11 @@ export default function ControleClientesVendas() {
             </div>
           )}
 
-          {/* Clientes */}
+          {/* CLIENTES */}
           {abaSelecionada === 'clientes' && (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <h2 className="text-2xl font-bold text-gray-800">
-                  {usuarioLogado?.tipo === 'vendedor' ? 'Meus Clientes' : 'Clientes'}
-                </h2>
+                <h2 className="text-2xl font-bold text-gray-800">Clientes</h2>
                 <button
                   onClick={() => setAbaSelecionada('adicionar')}
                   className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
@@ -1856,607 +1763,94 @@ export default function ControleClientesVendas() {
                 </button>
               </div>
 
-              <div className="bg-white rounded-lg shadow">
-                <div className="p-4 border-b">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <input
-                      type="text"
-                      placeholder="Buscar clientes..."
-                      value={busca}
-                      onChange={(e) => setBusca(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsável</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contato</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cidade</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendedor</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Última Compra</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {clientesFiltrados.map((cliente) => (
-                        <tr key={cliente.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <Building2 className="w-5 h-5 text-gray-400 mr-3" />
-                              <div>
-                                <div className="text-sm font-medium text-gray-900">{cliente.nomeEmpresa}</div>
-                                <div className="text-sm text-gray-500">{cliente.documento}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{cliente.responsavelCompra}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{cliente.telefone}</div>
-                            <div className="text-sm text-gray-500">{cliente.email}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{cliente.cidade}, {cliente.estado}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{cliente.vendedorResponsavel}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{formatarData(cliente.ultimaCompra)}</div>
-                            <div className="text-sm text-gray-500">{formatarMoeda(cliente.valorUltimaCompra)}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <div className="flex gap-2">
-                              {usuarioLogado?.tipo === 'admin' && (
-                                <button
-                                  onClick={() => iniciarEdicaoCliente(cliente)}
-                                  className="text-blue-600 hover:text-blue-900"
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </button>
-                              )}
-                              <button
-                                onClick={() => iniciarAlteracaoRota(cliente)}
-                                className="text-green-600 hover:text-green-900"
-                                title="Alterar dias de visita"
-                              >
-                                <Route className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Modal de Edição de Cliente */}
-          {clienteEditando && dadosEdicaoCliente && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Editar Cliente</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nome da Empresa</label>
-                    <input
-                      type="text"
-                      value={dadosEdicaoCliente.nomeEmpresa}
-                      onChange={(e) => setDadosEdicaoCliente({...dadosEdicaoCliente, nomeEmpresa: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Responsável pela Compra</label>
-                    <input
-                      type="text"
-                      value={dadosEdicaoCliente.responsavelCompra}
-                      onChange={(e) => setDadosEdicaoCliente({...dadosEdicaoCliente, responsavelCompra: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                    <input
-                      type="email"
-                      value={dadosEdicaoCliente.email}
-                      onChange={(e) => setDadosEdicaoCliente({...dadosEdicaoCliente, email: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Telefone</label>
-                    <input
-                      type="text"
-                      value={dadosEdicaoCliente.telefone}
-                      onChange={(e) => setDadosEdicaoCliente({...dadosEdicaoCliente, telefone: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Cidade</label>
-                    <input
-                      type="text"
-                      value={dadosEdicaoCliente.cidade}
-                      onChange={(e) => setDadosEdicaoCliente({...dadosEdicaoCliente, cidade: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
-                    <input
-                      type="text"
-                      value={dadosEdicaoCliente.estado}
-                      onChange={(e) => setDadosEdicaoCliente({...dadosEdicaoCliente, estado: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-                
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Observações</label>
-                  <textarea
-                    value={dadosEdicaoCliente.observacoes}
-                    onChange={(e) => setDadosEdicaoCliente({...dadosEdicaoCliente, observacoes: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    rows={3}
+              <div className="bg-white rounded-lg shadow p-4">
+                <div className="mb-4">
+                  <input
+                    type="text"
+                    placeholder="Buscar clientes..."
+                    value={busca}
+                    onChange={(e) => setBusca(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
-                
-                <div className="flex justify-end gap-3 mt-6">
-                  <button
-                    onClick={() => {
-                      setClienteEditando(null)
-                      setDadosEdicaoCliente(null)
-                    }}
-                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={salvarEdicaoCliente}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                  >
-                    Salvar
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
-          {/* Modal de Alteração de Rota */}
-          {clienteAlterandoRota && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                  Alterar Dias de Visita - {clienteAlterandoRota.nomeEmpresa}
-                </h3>
-                
-                <div className="space-y-2">
-                  {diasSemana.map((dia) => (
-                    <label key={dia} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={novosDiasVisita.includes(dia)}
-                        onChange={() => toggleDiaRota(dia)}
-                        className="mr-2"
-                      />
-                      {dia}
-                    </label>
-                  ))}
-                </div>
-                
-                <div className="flex justify-end gap-3 mt-6">
-                  <button
-                    onClick={() => {
-                      setClienteAlterandoRota(null)
-                      setNovosDiasVisita([])
-                    }}
-                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={salvarAlteracaoRota}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                  >
-                    Salvar
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Produtos */}
-          {abaSelecionada === 'produtos' && (
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <h2 className="text-2xl font-bold text-gray-800">Produtos</h2>
-                {usuarioLogado?.tipo === 'admin' && (
-                  <button
-                    onClick={() => setAbaSelecionada('adicionarProduto')}
-                    className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Adicionar Produto
-                  </button>
-                )}
-              </div>
-
-              <div className="bg-white rounded-lg shadow">
-                <div className="p-4 border-b">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <input
-                      type="text"
-                      placeholder="Buscar produtos..."
-                      value={busca}
-                      onChange={(e) => setBusca(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
-                  {produtosFiltrados.map((produto) => (
-                    <div key={produto.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {clientesFiltrados.map((cliente) => (
+                    <div key={cliente.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                       <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center">
-                          <Package className="w-8 h-8 text-blue-500 mr-3" />
-                          <div>
-                            <h3 className="font-semibold text-gray-800">{produto.nome}</h3>
-                            <p className="text-sm text-gray-500">{produto.categoria}</p>
-                          </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-800">{cliente.nomeEmpresa}</h3>
+                          <p className="text-sm text-gray-600">{cliente.responsavelCompra}</p>
                         </div>
                         {usuarioLogado?.tipo === 'admin' && (
                           <button
-                            onClick={() => removerProduto(produto.id)}
-                            className="text-red-500 hover:text-red-700"
+                            onClick={() => iniciarEdicaoCliente(cliente)}
+                            className="text-blue-500 hover:text-blue-700"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Edit className="w-4 h-4" />
                           </button>
                         )}
                       </div>
                       
-                      <p className="text-sm text-gray-600 mb-3">{produto.descricao}</p>
-                      
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <div className="text-lg font-bold text-green-600">{formatarMoeda(produto.preco)}</div>
-                          <div className="text-sm text-gray-500">Estoque: {produto.estoque}</div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Mail className="w-4 h-4" />
+                          {cliente.email}
                         </div>
-                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          produto.estoque > 50 ? 'bg-green-100 text-green-800' :
-                          produto.estoque > 20 ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {produto.estoque > 50 ? 'Alto' : produto.estoque > 20 ? 'Médio' : 'Baixo'}
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Phone className="w-4 h-4" />
+                          {cliente.telefone}
+                        </div>
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <MapPin className="w-4 h-4" />
+                          {cliente.cidade}, {cliente.estado}
+                        </div>
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <User className="w-4 h-4" />
+                          {cliente.vendedorResponsavel}
+                        </div>
+                      </div>
+
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <div className="flex flex-wrap gap-1">
+                          {cliente.diasVisita.map((dia) => (
+                            <span key={dia} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                              {dia}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="mt-3 pt-3 border-t border-gray-200 text-sm">
+                        <div className="flex justify-between text-gray-600">
+                          <span>Última compra:</span>
+                          <span className="font-medium">{formatarData(cliente.ultimaCompra)}</span>
+                        </div>
+                        <div className="flex justify-between text-gray-600 mt-1">
+                          <span>Valor:</span>
+                          <span className="font-medium text-green-600">{formatarMoeda(cliente.valorUltimaCompra)}</span>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            </div>
-          )}
 
-          {/* Vendas */}
-          {abaSelecionada === 'vendas' && (
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <h2 className="text-2xl font-bold text-gray-800">
-                  {usuarioLogado?.tipo === 'vendedor' ? 'Minhas Vendas' : 'Vendas'}
-                </h2>
-                <button
-                  onClick={() => setAbaSelecionada('registrarVenda')}
-                  className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  Registrar Venda
-                </button>
-              </div>
-
-              <div className="bg-white rounded-lg shadow overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantidade</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Total</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pagamento</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendedor</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {vendasFiltradas.map((venda) => {
-                        const cliente = clientes.find(c => c.id === venda.clienteId)
-                        const produto = produtos.find(p => p.id === venda.produtoId)
-                        return (
-                          <tr key={venda.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {formatarData(venda.data)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {cliente?.nomeEmpresa}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {produto?.nome}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {venda.quantidade}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                              {formatarMoeda(venda.valorTotal)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{venda.formaPagamento}</div>
-                              {venda.numeroNota && (
-                                <div className="text-xs text-gray-500">{venda.numeroNota}</div>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {venda.vendedorResponsavel}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                venda.status === 'Concluída' ? 'bg-green-100 text-green-800' :
-                                venda.status === 'Pendente' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-red-100 text-red-800'
-                              }`}>
-                                {venda.status}
-                              </span>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Rotas */}
-          {abaSelecionada === 'rotas' && (
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <h2 className="text-2xl font-bold text-gray-800">
-                  {usuarioLogado?.tipo === 'vendedor' ? 'Minhas Rotas' : 'Rotas de Vendas'}
-                </h2>
-                <div className="flex gap-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <input
-                      type="text"
-                      placeholder="Filtrar por vendedor..."
-                      value={filtroRotas}
-                      onChange={(e) => setFiltroRotas(e.target.value)}
-                      className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {diaSelecionado ? (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <button
-                      onClick={() => setDiaSelecionado(null)}
-                      className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
-                    >
-                      <Navigation className="w-4 h-4" />
-                      Voltar para visão geral
-                    </button>
-                    <h3 className="text-xl font-semibold text-gray-800">
-                      Clientes para {diaSelecionado} ({clientesPorDia(diaSelecionado).length} clientes)
-                    </h3>
-                  </div>
-
-                  <div className="bg-white rounded-lg shadow">
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empresa</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responsável</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Endereço</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Telefone</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendedor</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Última Compra</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {clientesPorDia(diaSelecionado)
-                            .filter(cliente => 
-                              usuarioLogado?.tipo === 'admin' || 
-                              cliente.vendedorResponsavel.toLowerCase().includes(filtroRotas.toLowerCase())
-                            )
-                            .map((cliente) => (
-                            <tr key={cliente.id} className="hover:bg-gray-50">
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center">
-                                  <Building2 className="w-5 h-5 text-gray-400 mr-3" />
-                                  <div>
-                                    <div className="text-sm font-medium text-gray-900">{cliente.nomeEmpresa}</div>
-                                    <div className="text-sm text-gray-500">{cliente.documento}</div>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {cliente.responsavelCompra}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-900">{cliente.endereco}</div>
-                                <div className="text-sm text-gray-500">{cliente.cidade}, {cliente.estado}</div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {cliente.telefone}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {cliente.vendedorResponsavel}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-900">{formatarData(cliente.ultimaCompra)}</div>
-                                <div className="text-sm text-gray-500">{formatarMoeda(cliente.valorUltimaCompra)}</div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {diasSemana.map((dia) => {
-                    const totalClientes = contarClientesPorDia(dia)
-                    return (
-                      <div
-                        key={dia}
-                        onClick={() => totalClientes > 0 && setDiaSelecionado(dia)}
-                        className={`bg-gradient-to-br ${coresDias[dia as keyof typeof coresDias]} text-white p-6 rounded-lg shadow-lg ${
-                          totalClientes > 0 ? 'cursor-pointer hover:shadow-xl transform hover:scale-105' : 'opacity-50'
-                        } transition-all duration-200`}
-                      >
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-lg font-semibold">{dia}</h3>
-                          <Calendar className="w-6 h-6 opacity-80" />
-                        </div>
-                        <div className="text-3xl font-bold mb-2">{totalClientes}</div>
-                        <div className="text-sm opacity-90">
-                          {totalClientes === 1 ? 'cliente' : 'clientes'}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Relatórios */}
-          {abaSelecionada === 'relatorios' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-800">Relatórios</h2>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Vendas por Forma de Pagamento */}
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Vendas por Forma de Pagamento</h3>
-                  <div className="space-y-3">
-                    {Object.entries(calcularTotaisPorPagamento()).map(([forma, dados]) => (
-                      <div key={forma} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <div className="font-medium text-gray-800">{forma}</div>
-                          <div className="text-sm text-gray-500">{dados.quantidade} vendas</div>
-                        </div>
-                        <div className="text-lg font-bold text-green-600">
-                          {formatarMoeda(dados.valor)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Top Produtos */}
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Produtos Mais Vendidos</h3>
-                  <div className="space-y-3">
-                    {produtos
-                      .map(produto => ({
-                        ...produto,
-                        totalVendido: vendasFiltradas
-                          .filter(v => v.produtoId === produto.id)
-                          .reduce((acc, v) => acc + v.quantidade, 0)
-                      }))
-                      .sort((a, b) => b.totalVendido - a.totalVendido)
-                      .slice(0, 5)
-                      .map((produto) => (
-                        <div key={produto.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                          <div>
-                            <div className="font-medium text-gray-800">{produto.nome}</div>
-                            <div className="text-sm text-gray-500">{formatarMoeda(produto.preco)}</div>
-                          </div>
-                          <div className="text-lg font-bold text-blue-600">
-                            {produto.totalVendido}
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-
-                {/* Vendas por Vendedor (apenas admin) */}
-                {usuarioLogado?.tipo === 'admin' && (
-                  <div className="bg-white rounded-lg shadow p-6 lg:col-span-2">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Performance dos Vendedores</h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendedor</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Clientes</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendas (Mês)</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Faturamento (Mês)</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comissão</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {vendedoresAtivos.map((vendedor) => {
-                            const stats = calcularEstatisticasVendedor(vendedor)
-                            return (
-                              <tr key={vendedor} className="hover:bg-gray-50">
-                                <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                  {vendedor}
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {stats.totalClientes}
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {stats.vendasMes}
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                                  {formatarMoeda(stats.faturamentoMes)}
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {formatarMoeda(stats.comissaoMes)} ({stats.percentualComissao}%)
-                                </td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                {clientesFiltrados.length === 0 && (
+                  <div className="text-center py-12">
+                    <User className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">Nenhum cliente encontrado</p>
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* Adicionar Cliente */}
+          {/* ADICIONAR CLIENTE */}
           {abaSelecionada === 'adicionar' && (
-            <div className="max-w-4xl mx-auto">
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-gray-800">Adicionar Novo Cliente</h2>
+              
               <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">Adicionar Novo Cliente</h2>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Nome da Empresa *</label>
@@ -2468,7 +1862,7 @@ export default function ControleClientesVendas() {
                       placeholder="Ex: Padaria São José"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Responsável pela Compra *</label>
                     <input
@@ -2479,7 +1873,7 @@ export default function ControleClientesVendas() {
                       placeholder="Ex: Maria Silva"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Documento</label>
                     <select
@@ -2491,7 +1885,7 @@ export default function ControleClientesVendas() {
                       <option value="CPF">CPF</option>
                     </select>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Documento</label>
                     <input
@@ -2499,10 +1893,10 @@ export default function ControleClientesVendas() {
                       value={novoCliente.documento}
                       onChange={(e) => setNovoCliente({...novoCliente, documento: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder={novoCliente.tipoDocumento === 'CNPJ' ? '00.000.000/0000-00' : '000.000.000-00'}
+                      placeholder="Ex: 12.345.678/0001-90"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
                     <input
@@ -2510,32 +1904,32 @@ export default function ControleClientesVendas() {
                       value={novoCliente.email}
                       onChange={(e) => setNovoCliente({...novoCliente, email: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="contato@empresa.com"
+                      placeholder="email@exemplo.com"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Telefone</label>
                     <input
-                      type="text"
+                      type="tel"
                       value={novoCliente.telefone}
                       onChange={(e) => setNovoCliente({...novoCliente, telefone: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="(11) 99999-9999"
                     />
                   </div>
-                  
-                  <div>
+
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Endereço</label>
                     <input
                       type="text"
                       value={novoCliente.endereco}
                       onChange={(e) => setNovoCliente({...novoCliente, endereco: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Rua das Flores, 123"
+                      placeholder="Rua, número, complemento"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Cidade</label>
                     <input
@@ -2546,7 +1940,7 @@ export default function ControleClientesVendas() {
                       placeholder="São Paulo"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
                     <input
@@ -2555,9 +1949,46 @@ export default function ControleClientesVendas() {
                       onChange={(e) => setNovoCliente({...novoCliente, estado: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="SP"
+                      maxLength={2}
                     />
                   </div>
-                  
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Localização GPS</label>
+                    <button
+                      onClick={obterLocalizacao}
+                      disabled={carregandoLocalizacao}
+                      className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors disabled:bg-gray-400"
+                    >
+                      <MapPin className="w-4 h-4" />
+                      {carregandoLocalizacao ? 'Obtendo localização...' : 'Usar Localização Atual'}
+                    </button>
+                    {localizacaoAtual && (
+                      <p className="text-sm text-green-600 mt-2">
+                        Localização obtida: {localizacaoAtual.latitude.toFixed(6)}, {localizacaoAtual.longitude.toFixed(6)}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Dias de Visita</label>
+                    <div className="flex flex-wrap gap-2">
+                      {diasSemana.map((dia) => (
+                        <button
+                          key={dia}
+                          onClick={() => toggleDiaVisita(dia)}
+                          className={`px-4 py-2 rounded-md transition-colors ${
+                            novoCliente.diasVisita.includes(dia)
+                              ? 'bg-blue-500 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                          }`}
+                        >
+                          {dia}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Vendedor Responsável</label>
                     <select
@@ -2566,65 +1997,24 @@ export default function ControleClientesVendas() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="">Selecione um vendedor</option>
-                      {usuarioLogado?.tipo === 'admin' ? (
-                        vendedoresAtivos.map(vendedor => (
-                          <option key={vendedor} value={vendedor}>{vendedor}</option>
-                        ))
-                      ) : (
-                        <option value={usuarioLogado?.nome}>{usuarioLogado?.nome}</option>
-                      )}
+                      {vendedoresAtivos.map((vendedor) => (
+                        <option key={vendedor} value={vendedor}>{vendedor}</option>
+                      ))}
                     </select>
                   </div>
-                </div>
-                
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Dias de Visita</label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
-                    {diasSemana.map((dia) => (
-                      <label key={dia} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={novoCliente.diasVisita.includes(dia)}
-                          onChange={() => toggleDiaVisita(dia)}
-                          className="mr-2"
-                        />
-                        <span className="text-sm">{dia}</span>
-                      </label>
-                    ))}
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                    <textarea
+                      value={novoCliente.observacoes}
+                      onChange={(e) => setNovoCliente({...novoCliente, observacoes: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      rows={3}
+                      placeholder="Observações sobre o cliente..."
+                    />
                   </div>
                 </div>
-                
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Localização</label>
-                  <div className="flex gap-4">
-                    <button
-                      onClick={obterLocalizacao}
-                      disabled={carregandoLocalizacao}
-                      className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 disabled:opacity-50"
-                    >
-                      <MapPin className="w-4 h-4" />
-                      {carregandoLocalizacao ? 'Obtendo...' : 'Obter Localização Atual'}
-                    </button>
-                    {localizacaoAtual && (
-                      <div className="flex items-center gap-2 text-sm text-green-600">
-                        <CheckCircle className="w-4 h-4" />
-                        Localização obtida
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Observações</label>
-                  <textarea
-                    value={novoCliente.observacoes}
-                    onChange={(e) => setNovoCliente({...novoCliente, observacoes: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    rows={3}
-                    placeholder="Informações adicionais sobre o cliente..."
-                  />
-                </div>
-                
+
                 <div className="flex justify-end gap-3 mt-6">
                   <button
                     onClick={() => setAbaSelecionada('clientes')}
@@ -2643,13 +2033,98 @@ export default function ControleClientesVendas() {
             </div>
           )}
 
-          {/* Adicionar Produto */}
+          {/* PRODUTOS */}
+          {abaSelecionada === 'produtos' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <h2 className="text-2xl font-bold text-gray-800">Produtos</h2>
+                {usuarioLogado?.tipo === 'admin' && (
+                  <button
+                    onClick={() => setAbaSelecionada('adicionarProduto')}
+                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Adicionar Produto
+                  </button>
+                )}
+              </div>
+
+              <div className="bg-white rounded-lg shadow p-4">
+                <div className="mb-4">
+                  <input
+                    type="text"
+                    placeholder="Buscar produtos..."
+                    value={busca}
+                    onChange={(e) => setBusca(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {produtosFiltrados.map((produto) => (
+                    <div key={produto.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h3 className="font-semibold text-gray-800">{produto.nome}</h3>
+                          <p className="text-sm text-gray-600">{produto.categoria}</p>
+                        </div>
+                        {usuarioLogado?.tipo === 'admin' && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => iniciarEdicaoProduto(produto)}
+                              className="text-blue-500 hover:text-blue-700"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => removerProduto(produto.id)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Preço:</span>
+                          <span className="text-lg font-bold text-green-600">{formatarMoeda(produto.preco)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Estoque:</span>
+                          <span className={`font-medium ${produto.estoque > 10 ? 'text-green-600' : 'text-orange-600'}`}>
+                            {produto.estoque} unidades
+                          </span>
+                        </div>
+                      </div>
+
+                      {produto.descricao && (
+                        <p className="mt-3 text-sm text-gray-600 border-t pt-3">
+                          {produto.descricao}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {produtosFiltrados.length === 0 && (
+                  <div className="text-center py-12">
+                    <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">Nenhum produto encontrado</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ADICIONAR PRODUTO */}
           {abaSelecionada === 'adicionarProduto' && usuarioLogado?.tipo === 'admin' && (
-            <div className="max-w-2xl mx-auto">
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-gray-800">Adicionar Novo Produto</h2>
+              
               <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">Adicionar Novo Produto</h2>
-                
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Nome do Produto *</label>
                     <input
@@ -2660,32 +2135,30 @@ export default function ControleClientesVendas() {
                       placeholder="Ex: Pacote Premium"
                     />
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Preço *</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={novoProduto.preco}
-                        onChange={(e) => setNovoProduto({...novoProduto, preco: parseFloat(e.target.value) || 0})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="0.00"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
-                      <input
-                        type="text"
-                        value={novoProduto.categoria}
-                        onChange={(e) => setNovoProduto({...novoProduto, categoria: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Ex: Pacotes, Doces"
-                      />
-                    </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Preço *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={novoProduto.preco}
+                      onChange={(e) => setNovoProduto({...novoProduto, preco: parseFloat(e.target.value) || 0})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="0.00"
+                    />
                   </div>
-                  
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
+                    <input
+                      type="text"
+                      value={novoProduto.categoria}
+                      onChange={(e) => setNovoProduto({...novoProduto, categoria: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Ex: Pacotes"
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Estoque Inicial</label>
                     <input
@@ -2696,8 +2169,8 @@ export default function ControleClientesVendas() {
                       placeholder="0"
                     />
                   </div>
-                  
-                  <div>
+
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
                     <textarea
                       value={novoProduto.descricao}
@@ -2708,7 +2181,7 @@ export default function ControleClientesVendas() {
                     />
                   </div>
                 </div>
-                
+
                 <div className="flex justify-end gap-3 mt-6">
                   <button
                     onClick={() => setAbaSelecionada('produtos')}
@@ -2718,7 +2191,7 @@ export default function ControleClientesVendas() {
                   </button>
                   <button
                     onClick={adicionarProduto}
-                    className="px-6 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
+                    className="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
                   >
                     Adicionar Produto
                   </button>
@@ -2727,1564 +2200,1729 @@ export default function ControleClientesVendas() {
             </div>
           )}
 
-          {/* Registrar Venda com Carrinho - ATUALIZADO COM EDIÇÃO DE PREÇO */}
+          {/* VENDAS */}
+          {abaSelecionada === 'vendas' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <h2 className="text-2xl font-bold text-gray-800">Vendas</h2>
+                <button
+                  onClick={() => setAbaSelecionada('registrarVenda')}
+                  className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Nova Venda
+                </button>
+              </div>
+
+              <div className="bg-white rounded-lg shadow p-4">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Data</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Cliente</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Produto</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Qtd</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Valor</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Pagamento</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Status</th>
+                        {usuarioLogado?.tipo === 'admin' && (
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Vendedor</th>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {vendasFiltradas.map((venda) => {
+                        const cliente = clientes.find(c => c.id === venda.clienteId)
+                        const produto = produtos.find(p => p.id === venda.produtoId)
+                        return (
+                          <tr key={venda.id} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="py-3 px-4 text-sm">{formatarData(venda.data)}</td>
+                            <td className="py-3 px-4 text-sm">{cliente?.nomeEmpresa || 'N/A'}</td>
+                            <td className="py-3 px-4 text-sm">{produto?.nome || 'N/A'}</td>
+                            <td className="py-3 px-4 text-sm">{venda.quantidade}</td>
+                            <td className="py-3 px-4 text-sm font-medium text-green-600">{formatarMoeda(venda.valorTotal)}</td>
+                            <td className="py-3 px-4 text-sm">{venda.formaPagamento}</td>
+                            <td className="py-3 px-4">
+                              <span className={`px-2 py-1 text-xs rounded-full ${
+                                venda.status === 'Concluída' ? 'bg-green-100 text-green-800' :
+                                venda.status === 'Pendente' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {venda.status}
+                              </span>
+                            </td>
+                            {usuarioLogado?.tipo === 'admin' && (
+                              <td className="py-3 px-4 text-sm">{venda.vendedorResponsavel}</td>
+                            )}
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+
+                  {vendasFiltradas.length === 0 && (
+                    <div className="text-center py-12">
+                      <ShoppingBag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500 text-lg">Nenhuma venda registrada</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* REGISTRAR VENDA - COM CARRINHO E DESCONTO */}
           {abaSelecionada === 'registrarVenda' && (
-            <div className="max-w-6xl mx-auto">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-gray-800">Registrar Nova Venda</h2>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Formulário de Venda */}
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h2 className="text-2xl font-bold text-gray-800 mb-6">Registrar Nova Venda</h2>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Cliente *</label>
-                      <select
-                        value={novaVenda.clienteId}
-                        onChange={(e) => setNovaVenda({...novaVenda, clienteId: parseInt(e.target.value)})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value={0}>Selecione um cliente</option>
-                        {clientesFiltrados.map((cliente) => (
-                          <option key={cliente.id} value={cliente.id}>
-                            {cliente.nomeEmpresa}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                <div className="lg:col-span-2 space-y-6">
+                  <div className="bg-white rounded-lg shadow p-6">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Informações da Venda</h3>
                     
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Data *</label>
-                      <input
-                        type="date"
-                        value={novaVenda.data}
-                        onChange={(e) => setNovaVenda({...novaVenda, data: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Forma de Pagamento *</label>
-                      <select
-                        value={novaVenda.formaPagamento}
-                        onChange={(e) => setNovaVenda({...novaVenda, formaPagamento: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        {formasPagamento.map((forma) => (
-                          <option key={forma} value={forma}>{forma}</option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    {novaVenda.formaPagamento === 'Nota Feita' && (
+                    <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Número da Nota *</label>
-                        <input
-                          type="text"
-                          value={novaVenda.numeroNota}
-                          onChange={(e) => setNovaVenda({...novaVenda, numeroNota: e.target.value})}
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
+                        <select
+                          value={novaVenda.clienteId}
+                          onChange={(e) => setNovaVenda({...novaVenda, clienteId: parseInt(e.target.value)})}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="Ex: NF-2024-001"
+                        >
+                          <option value={0}>Selecione um cliente</option>
+                          {clientesFiltrados.map((cliente) => (
+                            <option key={cliente.id} value={cliente.id}>
+                              {cliente.nomeEmpresa} - {cliente.responsavelCompra}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Data</label>
+                          <input
+                            type="date"
+                            value={novaVenda.data}
+                            onChange={(e) => setNovaVenda({...novaVenda, data: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Forma de Pagamento</label>
+                          <select
+                            value={novaVenda.formaPagamento}
+                            onChange={(e) => setNovaVenda({...novaVenda, formaPagamento: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            {formasPagamento.map((forma) => (
+                              <option key={forma} value={forma}>{forma}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {novaVenda.formaPagamento === 'Nota Feita' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Número da Nota</label>
+                          <input
+                            type="text"
+                            value={novaVenda.numeroNota}
+                            onChange={(e) => setNovaVenda({...novaVenda, numeroNota: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Ex: NF-2024-001"
+                          />
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                        <textarea
+                          value={novaVenda.observacoes}
+                          onChange={(e) => setNovaVenda({...novaVenda, observacoes: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          rows={3}
+                          placeholder="Observações sobre a venda..."
                         />
                       </div>
-                    )}
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Observações</label>
-                      <textarea
-                        value={novaVenda.observacoes}
-                        onChange={(e) => setNovaVenda({...novaVenda, observacoes: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        rows={3}
-                        placeholder="Observações sobre a venda..."
-                      />
                     </div>
                   </div>
-                </div>
 
-                {/* Lista de Produtos e Carrinho */}
-                <div className="space-y-6">
-                  {/* Produtos Disponíveis */}
+                  {/* Lista de Produtos */}
                   <div className="bg-white rounded-lg shadow p-6">
                     <h3 className="text-lg font-semibold text-gray-800 mb-4">Produtos Disponíveis</h3>
-                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {produtos.map((produto) => (
-                        <div key={produto.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                          <div className="flex-1">
-                            <div className="font-medium text-gray-900">{produto.nome}</div>
-                            <div className="text-sm text-gray-500">{formatarMoeda(produto.preco)} • Estoque: {produto.estoque}</div>
+                        <div key={produto.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <h4 className="font-semibold text-gray-800">{produto.nome}</h4>
+                              <p className="text-sm text-gray-500">{produto.categoria}</p>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-green-600">{formatarMoeda(produto.preco)}</div>
+                              <div className="text-xs text-gray-500">Estoque: {produto.estoque}</div>
+                            </div>
                           </div>
                           <button
                             onClick={() => adicionarAoCarrinho(produto.id)}
-                            className="bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 transition-colors"
+                            disabled={produto.estoque === 0}
+                            className={`w-full mt-2 py-2 px-4 rounded-md transition-colors ${
+                              produto.estoque === 0
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                : 'bg-blue-500 text-white hover:bg-blue-600'
+                            }`}
                           >
-                            <Plus className="w-4 h-4" />
+                            <Plus className="w-4 h-4 inline mr-2" />
+                            Adicionar ao Carrinho
                           </button>
                         </div>
                       ))}
                     </div>
                   </div>
+                </div>
 
-                  {/* Carrinho COM EDIÇÃO DE PREÇO */}
-                  <div className="bg-white rounded-lg shadow p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-800">Carrinho</h3>
-                      {carrinho.length > 0 && (
-                        <button
-                          onClick={limparCarrinho}
-                          className="text-red-600 hover:text-red-800 text-sm"
-                        >
-                          Limpar Carrinho
-                        </button>
-                      )}
-                    </div>
-                    
+                {/* Carrinho com Desconto */}
+                <div className="lg:col-span-1">
+                  <div className="bg-white rounded-lg shadow p-6 sticky top-6">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center justify-between">
+                      <span>Carrinho</span>
+                      <span className="text-sm text-gray-500">({carrinho.length} {carrinho.length === 1 ? 'item' : 'itens'})</span>
+                    </h3>
+
                     {carrinho.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <ShoppingBag className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                        <p>Carrinho vazio</p>
-                        <p className="text-sm">Adicione produtos para começar</p>
+                      <div className="text-center py-8">
+                        <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500">Carrinho vazio</p>
+                        <p className="text-sm text-gray-400 mt-1">Adicione produtos para continuar</p>
                       </div>
                     ) : (
-                      <div className="space-y-3">
-                        {carrinho.map((item) => {
-                          const produto = produtos.find(p => p.id === item.produtoId)
-                          return (
-                            <div key={item.produtoId} className="p-4 bg-gray-50 rounded-lg">
-                              <div className="flex items-start justify-between mb-3">
-                                <div className="flex-1">
-                                  <div className="font-medium text-gray-900">{produto?.nome}</div>
-                                  <div className="text-sm text-gray-500">
-                                    Preço original: {formatarMoeda(produto?.preco || 0)}
+                      <>
+                        <div className="space-y-3 mb-4 max-h-96 overflow-y-auto">
+                          {carrinho.map((item) => {
+                            const produto = produtos.find(p => p.id === item.produtoId)
+                            if (!produto) return null
+
+                            return (
+                              <div key={item.produtoId} className="border border-gray-200 rounded-lg p-3">
+                                <div className="flex items-start justify-between mb-2">
+                                  <div className="flex-1">
+                                    <h4 className="font-medium text-gray-800 text-sm">{produto.nome}</h4>
+                                    <p className="text-xs text-gray-500">Preço original: {formatarMoeda(item.precoUnitario)}</p>
                                   </div>
-                                </div>
-                                <button
-                                  onClick={() => removerDoCarrinho(item.produtoId)}
-                                  className="text-red-500 hover:text-red-700 ml-2"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                              
-                              {/* NOVA SEÇÃO: Edição de Preço */}
-                              <div className="grid grid-cols-2 gap-3 mb-3">
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                                    Preço Unitário (Editável)
-                                  </label>
-                                  <div className="flex items-center">
-                                    <span className="text-sm text-gray-500 mr-2">R$</span>
-                                    <input
-                                      type="number"
-                                      step="0.01"
-                                      min="0"
-                                      value={item.precoUnitario}
-                                      onChange={(e) => atualizarPrecoCarrinho(item.produtoId, parseFloat(e.target.value) || 0)}
-                                      className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    />
-                                  </div>
+                                  <button
+                                    onClick={() => setCarrinho(carrinho.filter(i => i.produtoId !== item.produtoId))}
+                                    className="text-red-500 hover:text-red-700"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
                                 </div>
                                 
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-700 mb-1">Quantidade</label>
+                                {/* Campo para alterar preço */}
+                                <div className="mb-2">
+                                  <label className="block text-xs text-gray-600 mb-1">Preço de venda:</label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={item.precoComDesconto}
+                                    onChange={(e) => alterarPrecoCarrinho(item.produtoId, parseFloat(e.target.value) || 0)}
+                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="0.00"
+                                  />
+                                  {item.precoComDesconto < item.precoUnitario && (
+                                    <p className="text-xs text-green-600 mt-1">
+                                      Desconto: {formatarMoeda(item.precoUnitario - item.precoComDesconto)}
+                                    </p>
+                                  )}
+                                </div>
+                                
+                                <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-2">
                                     <button
                                       onClick={() => removerDoCarrinho(item.produtoId)}
-                                      className="bg-red-500 text-white p-1 rounded hover:bg-red-600 transition-colors"
+                                      className="w-7 h-7 bg-gray-200 rounded-md flex items-center justify-center hover:bg-gray-300"
                                     >
-                                      <Minus className="w-3 h-3" />
+                                      <Minus className="w-4 h-4" />
                                     </button>
                                     <span className="w-8 text-center font-medium">{item.quantidade}</span>
                                     <button
                                       onClick={() => adicionarAoCarrinho(item.produtoId)}
-                                      className="bg-green-500 text-white p-1 rounded hover:bg-green-600 transition-colors"
+                                      className="w-7 h-7 bg-blue-500 text-white rounded-md flex items-center justify-center hover:bg-blue-600"
                                     >
-                                      <Plus className="w-3 h-3" />
+                                      <Plus className="w-4 h-4" />
                                     </button>
+                                  </div>
+                                  <div className="font-bold text-gray-800">
+                                    {formatarMoeda(item.quantidade * item.precoComDesconto)}
                                   </div>
                                 </div>
                               </div>
-                              
-                              {/* Cálculo do Total do Item */}
-                              <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                                <span className="text-sm text-gray-600">
-                                  {formatarMoeda(item.precoUnitario)} × {item.quantidade}
-                                </span>
-                                <span className="font-bold text-green-600">
-                                  {formatarMoeda(item.quantidade * item.precoUnitario)}
-                                </span>
-                              </div>
-                              
-                              {/* Indicador de Desconto/Acréscimo */}
-                              {produto && item.precoUnitario !== produto.preco && (
-                                <div className="mt-2 text-xs">
-                                  {item.precoUnitario < produto.preco ? (
-                                    <span className="text-green-600 font-medium">
-                                      ↓ Desconto de {formatarMoeda(produto.preco - item.precoUnitario)} por unidade
-                                    </span>
-                                  ) : (
-                                    <span className="text-orange-600 font-medium">
-                                      ↑ Acréscimo de {formatarMoeda(item.precoUnitario - produto.preco)} por unidade
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })}
-                        
-                        <div className="border-t pt-3 mt-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-lg font-semibold text-gray-800">Total:</span>
-                            <span className="text-2xl font-bold text-green-600">
-                              {formatarMoeda(calcularTotalCarrinho())}
-                            </span>
-                          </div>
+                            )
+                          })}
                         </div>
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Botões de Ação */}
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setAbaSelecionada('vendas')}
-                      className="flex-1 px-6 py-3 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={registrarVendaCarrinho}
-                      disabled={!novaVenda.clienteId || carrinho.length === 0}
-                      className="flex-1 px-6 py-3 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Registrar Venda
-                    </button>
+                        <div className="border-t pt-4 space-y-2">
+                          <div className="flex justify-between text-lg font-bold text-gray-800">
+                            <span>Total:</span>
+                            <span className="text-green-600">{formatarMoeda(calcularTotalCarrinho())}</span>
+                          </div>
+                          
+                          <button
+                            onClick={limparCarrinho}
+                            className="w-full py-2 px-4 border border-red-300 text-red-600 rounded-md hover:bg-red-50 transition-colors"
+                          >
+                            Limpar Carrinho
+                          </button>
+                          
+                          <button
+                            onClick={registrarVendaCarrinho}
+                            disabled={!novaVenda.clienteId || carrinho.length === 0}
+                            className={`w-full py-3 px-4 rounded-md font-medium transition-colors ${
+                              !novaVenda.clienteId || carrinho.length === 0
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                : 'bg-green-500 text-white hover:bg-green-600'
+                            }`}
+                          >
+                            <CheckCircle className="w-5 h-5 inline mr-2" />
+                            Finalizar Venda
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Usuários (Admin) */}
+          {/* ROTAS */}
+          {abaSelecionada === 'rotas' && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-gray-800">Rotas de Visita</h2>
+              
+              {!diaSelecionado ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {diasSemana.map((dia) => {
+                    const qtdClientes = contarClientesPorDia(dia)
+                    return (
+                      <button
+                        key={dia}
+                        onClick={() => setDiaSelecionado(dia)}
+                        className={`bg-gradient-to-r ${coresDias[dia]} text-white p-6 rounded-lg hover:shadow-lg transition-all transform hover:scale-105`}
+                      >
+                        <div className="text-4xl font-bold mb-2">{qtdClientes}</div>
+                        <div className="text-sm opacity-90">{dia}</div>
+                        <div className="text-xs opacity-75 mt-1">
+                          {qtdClientes === 1 ? 'cliente' : 'clientes'}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => setDiaSelecionado(null)}
+                      className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+                    >
+                      <X className="w-5 h-5" />
+                      Voltar para visão geral
+                    </button>
+                    <h3 className="text-xl font-semibold text-gray-800">
+                      Clientes de {diaSelecionado}
+                    </h3>
+                  </div>
+
+                  <div className="bg-white rounded-lg shadow p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {clientesPorDia(diaSelecionado).map((cliente) => (
+                        <div key={cliente.id} className="border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <h4 className="font-semibold text-gray-800">{cliente.nomeEmpresa}</h4>
+                              <p className="text-sm text-gray-600">{cliente.responsavelCompra}</p>
+                            </div>
+                            <button
+                              onClick={() => iniciarAlteracaoRota(cliente)}
+                              className="text-blue-500 hover:text-blue-700"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          </div>
+                          
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <MapPin className="w-4 h-4" />
+                              {cliente.endereco}, {cliente.cidade}
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <Phone className="w-4 h-4" />
+                              {cliente.telefone}
+                            </div>
+                          </div>
+
+                          {cliente.latitude && cliente.longitude && (
+                            <a
+                              href={`https://www.google.com/maps/dir/?api=1&destination=${cliente.latitude},${cliente.longitude}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-3 flex items-center justify-center gap-2 bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition-colors"
+                            >
+                              <Navigation className="w-4 h-4" />
+                              Abrir no Google Maps
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {clientesPorDia(diaSelecionado).length === 0 && (
+                      <div className="text-center py-12">
+                        <Route className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <p className="text-gray-500 text-lg">Nenhum cliente para {diaSelecionado}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* RELATÓRIOS - COM FILTROS DE DATA */}
+          {abaSelecionada === 'relatorios' && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-gray-800">Relatórios de Vendas</h2>
+              
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Filtrar Período</h3>
+                
+                {/* Filtros Rápidos */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <button
+                    onClick={() => aplicarFiltroRapido('hoje')}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      filtroAtivoRelatorio === 'hoje'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Hoje
+                  </button>
+                  <button
+                    onClick={() => aplicarFiltroRapido('ontem')}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      filtroAtivoRelatorio === 'ontem'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Ontem
+                  </button>
+                  <button
+                    onClick={() => aplicarFiltroRapido('semana')}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      filtroAtivoRelatorio === 'semana'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Última Semana
+                  </button>
+                  <button
+                    onClick={() => aplicarFiltroRapido('mes')}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      filtroAtivoRelatorio === 'mes'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Último Mês
+                  </button>
+                  <button
+                    onClick={() => setFiltroAtivoRelatorio('personalizado')}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      filtroAtivoRelatorio === 'personalizado'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Personalizado
+                  </button>
+                </div>
+
+                {/* Filtro Personalizado */}
+                {filtroAtivoRelatorio === 'personalizado' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Data Inicial</label>
+                      <input
+                        type="date"
+                        value={dataInicialRelatorio}
+                        onChange={(e) => setDataInicialRelatorio(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Data Final</label>
+                      <input
+                        type="date"
+                        value={dataFinalRelatorio}
+                        onChange={(e) => setDataFinalRelatorio(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Resumo do Período */}
+                {(() => {
+                  const vendasDoPeriodo = obterVendasVendedorPorPeriodo(dataInicialRelatorio, dataFinalRelatorio)
+                  const totaisPorPagamento = calcularTotaisPorPagamentoVendedorPeriodo(dataInicialRelatorio, dataFinalRelatorio)
+                  const totalGeral = vendasDoPeriodo.reduce((acc, v) => acc + v.valorTotal, 0)
+                  
+                  return (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div className="bg-blue-50 p-4 rounded-lg">
+                          <div className="text-sm text-blue-600 mb-1">Total de Vendas</div>
+                          <div className="text-2xl font-bold text-blue-700">{vendasDoPeriodo.length}</div>
+                        </div>
+                        
+                        <div className="bg-green-50 p-4 rounded-lg">
+                          <div className="text-sm text-green-600 mb-1">Faturamento Total</div>
+                          <div className="text-2xl font-bold text-green-700">{formatarMoeda(totalGeral)}</div>
+                        </div>
+                        
+                        <div className="bg-purple-50 p-4 rounded-lg">
+                          <div className="text-sm text-purple-600 mb-1">Produtos Vendidos</div>
+                          <div className="text-2xl font-bold text-purple-700">
+                            {vendasDoPeriodo.reduce((acc, v) => acc + v.quantidade, 0)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="font-semibold text-gray-800 mb-3">Por Forma de Pagamento</h4>
+                        <div className="space-y-2">
+                          {formasPagamento.map((forma) => (
+                            <div key={forma} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                              <span className="font-medium text-gray-700">{forma}</span>
+                              <div className="text-right">
+                                <div className="font-bold text-gray-800">
+                                  {formatarMoeda(totaisPorPagamento[forma]?.valor || 0)}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {totaisPorPagamento[forma]?.quantidade || 0} unidades
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )
+                })()}
+              </div>
+            </div>
+          )}
+
+          {/* PERFIL DO VENDEDOR */}
+          {abaSelecionada === 'perfilVendedor' && usuarioLogado?.tipo === 'vendedor' && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-gray-800">Meu Perfil</h2>
+              
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                    <User className="w-10 h-10" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-800">{usuarioLogado.nome}</h3>
+                    <p className="text-gray-600">{usuarioLogado.email}</p>
+                    <p className="text-sm text-gray-500">Vendedor desde {formatarData(usuarioLogado.dataRegistro)}</p>
+                  </div>
+                </div>
+
+                {(() => {
+                  const stats = calcularEstatisticasVendedor(usuarioLogado.nome)
+                  return (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <div className="bg-blue-50 p-4 rounded-lg">
+                          <div className="text-sm text-blue-600 mb-1">Meus Clientes</div>
+                          <div className="text-2xl font-bold text-blue-700">{stats.totalClientes}</div>
+                        </div>
+                        
+                        <div className="bg-green-50 p-4 rounded-lg">
+                          <div className="text-sm text-green-600 mb-1">Vendas no Mês</div>
+                          <div className="text-2xl font-bold text-green-700">{stats.vendasMes}</div>
+                        </div>
+                        
+                        <div className="bg-purple-50 p-4 rounded-lg">
+                          <div className="text-sm text-purple-600 mb-1">Faturamento Mês</div>
+                          <div className="text-2xl font-bold text-purple-700">{formatarMoeda(stats.faturamentoMes)}</div>
+                        </div>
+                        
+                        <div className="bg-orange-50 p-4 rounded-lg">
+                          <div className="text-sm text-orange-600 mb-1">Comissão ({stats.percentualComissao}%)</div>
+                          <div className="text-2xl font-bold text-orange-700">{formatarMoeda(stats.comissaoMes)}</div>
+                        </div>
+                      </div>
+
+                      <div className="border-t pt-4">
+                        <h4 className="font-semibold text-gray-800 mb-3">Informações da Conta</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Taxa de Comissão:</span>
+                            <span className="font-medium">{stats.percentualComissao}%</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Status:</span>
+                            <span className="font-medium text-green-600">Ativo</span>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )
+                })()}
+              </div>
+            </div>
+          )}
+
+          {/* USUÁRIOS (ADMIN) */}
           {abaSelecionada === 'usuarios' && usuarioLogado?.tipo === 'admin' && (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h2 className="text-2xl font-bold text-gray-800">Gerenciar Usuários</h2>
                 <button
                   onClick={() => setMostrarAdicionarVendedor(true)}
-                  className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
+                  className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
                 >
-                  <UserPlus className="w-4 h-4" />
+                  <Plus className="w-4 h-4" />
                   Adicionar Vendedor
                 </button>
               </div>
 
-              <div className="bg-white rounded-lg shadow overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuário</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comissão</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data Registro</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {usuarios.map((usuario) => (
-                        <tr key={usuario.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
-                                usuario.tipo === 'admin' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'
-                              }`}>
-                                {usuario.tipo === 'admin' ? <Shield className="w-4 h-4" /> : <User className="w-4 h-4" />}
-                              </div>
-                              <div>
-                                <div className="text-sm font-medium text-gray-900">{usuario.nome}</div>
-                                {usuario.criadoPor && (
-                                  <div className="text-xs text-gray-500">Criado por: {usuario.criadoPor}</div>
-                                )}
-                              </div>
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Vendedores</h3>
+                
+                <div className="space-y-4">
+                  {usuarios.filter(u => u.tipo === 'vendedor').map((vendedor) => (
+                    <div key={vendedor.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h4 className="font-semibold text-gray-800">{vendedor.nome}</h4>
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              vendedor.ativo 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {vendedor.ativo ? 'Ativo' : 'Inativo'}
+                            </span>
+                          </div>
+                          
+                          <div className="space-y-1 text-sm text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <Mail className="w-4 h-4" />
+                              {vendedor.email}
                             </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {usuario.email}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              usuario.tipo === 'admin' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                            }`}>
-                              {usuario.tipo === 'admin' ? 'Administrador' : 'Vendedor'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              usuario.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}>
-                              {usuario.ativo ? 'Ativo' : 'Inativo'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {usuario.tipo === 'vendedor' ? `${usuario.comissao || 5}%` : '-'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {formatarData(usuario.dataRegistro)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            {usuario.tipo === 'vendedor' && (
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => iniciarEdicaoVendedor(usuario)}
-                                  className="text-blue-600 hover:text-blue-900"
-                                  title="Editar vendedor"
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => iniciarTrocaSenhaVendedor(usuario)}
-                                  className="text-purple-600 hover:text-purple-900"
-                                  title="Trocar senha"
-                                >
-                                  <Key className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => alternarStatusVendedor(usuario.id)}
-                                  className={`${usuario.ativo ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'}`}
-                                  title={usuario.ativo ? 'Desativar' : 'Ativar'}
-                                >
-                                  {usuario.ativo ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                                </button>
-                                <button
-                                  onClick={() => excluirVendedor(usuario.id)}
-                                  className="text-red-600 hover:text-red-900"
-                                  title="Excluir vendedor"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4" />
+                              Registrado em: {formatarData(vendedor.dataRegistro)}
+                            </div>
+                            {vendedor.comissao && (
+                              <div className="flex items-center gap-2">
+                                <DollarSign className="w-4 h-4" />
+                                Comissão: {vendedor.comissao}%
                               </div>
                             )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Modal Adicionar Vendedor */}
-          {mostrarAdicionarVendedor && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Adicionar Novo Vendedor</h3>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nome Completo</label>
-                    <input
-                      type="text"
-                      value={novoVendedor.nome}
-                      onChange={(e) => setNovoVendedor({...novoVendedor, nome: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Ex: João Silva"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email (Login)</label>
-                    <input
-                      type="email"
-                      value={novoVendedor.email}
-                      onChange={(e) => setNovoVendedor({...novoVendedor, email: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="joao@vendas.com"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Senha</label>
-                    <input
-                      type="password"
-                      value={novoVendedor.senha}
-                      onChange={(e) => setNovoVendedor({...novoVendedor, senha: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Digite a senha"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Comissão (%)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      value={novoVendedor.comissao}
-                      onChange={(e) => setNovoVendedor({...novoVendedor, comissao: parseFloat(e.target.value) || 5})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex justify-end gap-3 mt-6">
-                  <button
-                    onClick={() => {
-                      setMostrarAdicionarVendedor(false)
-                      setNovoVendedor({ nome: '', email: '', senha: '', comissao: 5 })
-                    }}
-                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={adicionarVendedor}
-                    className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
-                  >
-                    Adicionar
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Modal Editar Vendedor */}
-          {vendedorEditando && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Editar Vendedor</h3>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nome Completo</label>
-                    <input
-                      type="text"
-                      value={dadosEdicaoVendedor.nome}
-                      onChange={(e) => setDadosEdicaoVendedor({...dadosEdicaoVendedor, nome: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email (Login)</label>
-                    <input
-                      type="email"
-                      value={dadosEdicaoVendedor.email}
-                      onChange={(e) => setDadosEdicaoVendedor({...dadosEdicaoVendedor, email: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Comissão (%)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      value={dadosEdicaoVendedor.comissao}
-                      onChange={(e) => setDadosEdicaoVendedor({...dadosEdicaoVendedor, comissao: parseFloat(e.target.value) || 5})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex justify-end gap-3 mt-6">
-                  <button
-                    onClick={() => {
-                      setVendedorEditando(null)
-                      setDadosEdicaoVendedor({ nome: '', email: '', comissao: 5 })
-                    }}
-                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={salvarEdicaoVendedor}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                  >
-                    Salvar
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Modal Trocar Senha Vendedor */}
-          {vendedorTrocandoSenha && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                  Trocar Senha - {vendedorTrocandoSenha.nome}
-                </h3>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nova Senha</label>
-                    <input
-                      type="password"
-                      value={novaSenhaVendedor}
-                      onChange={(e) => setNovaSenhaVendedor(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Digite a nova senha"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Confirmar Nova Senha</label>
-                    <input
-                      type="password"
-                      value={confirmarNovaSenha}
-                      onChange={(e) => setConfirmarNovaSenha(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Confirme a nova senha"
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex justify-end gap-3 mt-6">
-                  <button
-                    onClick={() => {
-                      setVendedorTrocandoSenha(null)
-                      setNovaSenhaVendedor('')
-                      setConfirmarNovaSenha('')
-                    }}
-                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={trocarSenhaVendedor}
-                    className="px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600"
-                  >
-                    Alterar Senha
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Perfil do Vendedor */}
-          {abaSelecionada === 'perfilVendedor' && usuarioLogado?.tipo === 'vendedor' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-800">Meu Perfil</h2>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Informações do Vendedor */}
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Informações Pessoais</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Nome:</span>
-                      <span className="font-medium">{usuarioLogado.nome}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Email:</span>
-                      <span className="font-medium">{usuarioLogado.email}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Comissão:</span>
-                      <span className="font-medium">{usuarioLogado.comissao || 5}%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Data de Registro:</span>
-                      <span className="font-medium">{formatarData(usuarioLogado.dataRegistro)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Estatísticas do Vendedor */}
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Minhas Estatísticas</h3>
-                  {(() => {
-                    const stats = calcularEstatisticasVendedor(usuarioLogado.nome)
-                    return (
-                      <div className="space-y-3">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Total de Clientes:</span>
-                          <span className="font-medium text-blue-600">{stats.totalClientes}</span>
+                          </div>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Vendas este Mês:</span>
-                          <span className="font-medium text-green-600">{stats.vendasMes}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Faturamento do Mês:</span>
-                          <span className="font-medium text-purple-600">{formatarMoeda(stats.faturamentoMes)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Comissão do Mês:</span>
-                          <span className="font-medium text-orange-600">{formatarMoeda(stats.comissaoMes)}</span>
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => iniciarEdicaoVendedor(vendedor)}
+                            className="p-2 text-blue-500 hover:text-blue-700"
+                            title="Editar"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => iniciarTrocaSenhaVendedor(vendedor)}
+                            className="p-2 text-purple-500 hover:text-purple-700"
+                            title="Trocar Senha"
+                          >
+                            <Key className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => alternarStatusVendedor(vendedor.id)}
+                            className={`p-2 ${vendedor.ativo ? 'text-orange-500 hover:text-orange-700' : 'text-green-500 hover:text-green-700'}`}
+                            title={vendedor.ativo ? 'Desativar' : 'Ativar'}
+                          >
+                            {vendedor.ativo ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                          </button>
+                          <button
+                            onClick={() => excluirVendedor(vendedor.id)}
+                            className="p-2 text-red-500 hover:text-red-700"
+                            title="Excluir"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
-                    )
-                  })()}
+                    </div>
+                  ))}
                 </div>
-              </div>
 
-              {/* Vendas Recentes */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Minhas Vendas Recentes</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pagamento</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {vendasFiltradas.slice(0, 5).map((venda) => {
-                        const cliente = clientes.find(c => c.id === venda.clienteId)
-                        const produto = produtos.find(p => p.id === venda.produtoId)
-                        return (
-                          <tr key={venda.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {formatarData(venda.data)}
-                            </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {cliente?.nomeEmpresa}
-                            </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {produto?.nome}
-                            </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                              {formatarMoeda(venda.valorTotal)}
-                            </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {venda.formaPagamento}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                {usuarios.filter(u => u.tipo === 'vendedor').length === 0 && (
+                  <div className="text-center py-12">
+                    <User className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">Nenhum vendedor cadastrado</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          {/* Acompanhar Vendedores (Admin) */}
+          {/* ACOMPANHAR VENDEDORES (ADMIN) */}
           {abaSelecionada === 'acompanharVendedores' && usuarioLogado?.tipo === 'admin' && (
             <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <h2 className="text-2xl font-bold text-gray-800">Acompanhar Vendedores</h2>
-                <select
-                  value={vendedorSelecionado}
-                  onChange={(e) => setVendedorSelecionado(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Selecione um vendedor</option>
-                  {vendedoresAtivos.map(vendedor => (
-                    <option key={vendedor} value={vendedor}>{vendedor}</option>
-                  ))}
-                </select>
-              </div>
+              <h2 className="text-2xl font-bold text-gray-800">Acompanhar Vendedores</h2>
+              
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Selecione um Vendedor</label>
+                  <select
+                    value={vendedorSelecionado}
+                    onChange={(e) => setVendedorSelecionado(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Selecione um vendedor</option>
+                    {vendedoresAtivos.map((vendedor) => (
+                      <option key={vendedor} value={vendedor}>{vendedor}</option>
+                    ))}
+                  </select>
+                </div>
 
-              {vendedorSelecionado && (
-                <div className="space-y-6">
-                  {/* Estatísticas do Vendedor Selecionado */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                {vendedorSelecionado && (
+                  <div className="space-y-6">
                     {(() => {
                       const stats = calcularEstatisticasVendedor(vendedorSelecionado)
                       return (
                         <>
-                          <div className="bg-blue-500 text-white p-6 rounded-lg">
-                            <div className="text-3xl font-bold">{stats.totalClientes}</div>
-                            <div className="text-sm opacity-90">Clientes</div>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="bg-blue-50 p-4 rounded-lg">
+                              <div className="text-sm text-blue-600 mb-1">Total de Clientes</div>
+                              <div className="text-2xl font-bold text-blue-700">{stats.totalClientes}</div>
+                            </div>
+                            
+                            <div className="bg-green-50 p-4 rounded-lg">
+                              <div className="text-sm text-green-600 mb-1">Vendas no Mês</div>
+                              <div className="text-2xl font-bold text-green-700">{stats.vendasMes}</div>
+                            </div>
+                            
+                            <div className="bg-purple-50 p-4 rounded-lg">
+                              <div className="text-sm text-purple-600 mb-1">Faturamento Mês</div>
+                              <div className="text-2xl font-bold text-purple-700">{formatarMoeda(stats.faturamentoMes)}</div>
+                            </div>
+                            
+                            <div className="bg-orange-50 p-4 rounded-lg">
+                              <div className="text-sm text-orange-600 mb-1">Comissão ({stats.percentualComissao}%)</div>
+                              <div className="text-2xl font-bold text-orange-700">{formatarMoeda(stats.comissaoMes)}</div>
+                            </div>
                           </div>
-                          <div className="bg-green-500 text-white p-6 rounded-lg">
-                            <div className="text-3xl font-bold">{stats.vendasMes}</div>
-                            <div className="text-sm opacity-90">Vendas (Mês)</div>
-                          </div>
-                          <div className="bg-purple-500 text-white p-6 rounded-lg">
-                            <div className="text-3xl font-bold">{formatarMoeda(stats.faturamentoMes)}</div>
-                            <div className="text-sm opacity-90">Faturamento (Mês)</div>
-                          </div>
-                          <div className="bg-orange-500 text-white p-6 rounded-lg">
-                            <div className="text-3xl font-bold">{formatarMoeda(stats.comissaoMes)}</div>
-                            <div className="text-sm opacity-90">Comissão (Mês)</div>
+
+                          <div>
+                            <h4 className="font-semibold text-gray-800 mb-3">Clientes do Vendedor</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {clientes.filter(c => c.vendedorResponsavel === vendedorSelecionado).map((cliente) => (
+                                <div key={cliente.id} className="border border-gray-200 rounded-lg p-3">
+                                  <h5 className="font-medium text-gray-800">{cliente.nomeEmpresa}</h5>
+                                  <p className="text-sm text-gray-600">{cliente.responsavelCompra}</p>
+                                  <div className="mt-2 flex flex-wrap gap-1">
+                                    {cliente.diasVisita.map((dia) => (
+                                      <span key={dia} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                        {dia}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </>
                       )
                     })()}
                   </div>
+                )}
 
-                  {/* Vendas do Vendedor */}
-                  <div className="bg-white rounded-lg shadow p-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                      Vendas de {vendedorSelecionado}
-                    </h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantidade</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pagamento</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {vendas
-                            .filter(venda => venda.vendedorResponsavel === vendedorSelecionado)
-                            .map((venda) => {
-                              const cliente = clientes.find(c => c.id === venda.clienteId)
-                              const produto = produtos.find(p => p.id === venda.produtoId)
-                              return (
-                                <tr key={venda.id} className="hover:bg-gray-50">
-                                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {formatarData(venda.data)}
-                                  </td>
-                                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {cliente?.nomeEmpresa}
-                                  </td>
-                                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {produto?.nome}
-                                  </td>
-                                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {venda.quantidade}
-                                  </td>
-                                  <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                                    {formatarMoeda(venda.valorTotal)}
-                                  </td>
-                                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {venda.formaPagamento}
-                                  </td>
-                                </tr>
-                              )
-                            })}
-                        </tbody>
-                      </table>
-                    </div>
+                {!vendedorSelecionado && (
+                  <div className="text-center py-12">
+                    <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">Selecione um vendedor para ver as estatísticas</p>
                   </div>
-
-                  {/* Estoque do Vendedor */}
-                  <div className="bg-white rounded-lg shadow p-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                      Estoque de {vendedorSelecionado}
-                    </h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Levado</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendido</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">A Devolver</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {obterEstoqueVendedorEspecifico(vendedorSelecionado).map((estoque) => {
-                            const quantidadeVendida = calcularQuantidadeVendidaVendedor(vendedorSelecionado, estoque.produtoId)
-                            return (
-                              <tr key={estoque.id} className="hover:bg-gray-50">
-                                <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                  {estoque.produtoNome}
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {estoque.quantidadeLevada}
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
-                                  {quantidadeVendida}
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-orange-600 font-medium">
-                                  {estoque.quantidadeLevada - quantidadeVendida}
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {formatarData(estoque.data)}
-                                </td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
 
-          {/* Fechamento do Dia (Vendedor) */}
+          {/* FECHAMENTO DO DIA - VENDEDOR */}
           {abaSelecionada === 'fechamentoDia' && usuarioLogado?.tipo === 'vendedor' && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-gray-800">Fechamento do Dia</h2>
               
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Resumo de Vendas do Dia */}
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Vendas de Hoje</h3>
-                  <div className="space-y-3">
-                    {Object.entries(calcularTotaisPorPagamento()).map(([forma, dados]) => (
-                      <div key={forma} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <div className="font-medium text-gray-800">{forma}</div>
-                          <div className="text-sm text-gray-500">{dados.quantidade} vendas</div>
-                        </div>
-                        <div className="text-lg font-bold text-green-600">
-                          {formatarMoeda(dados.valor)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Resumo de Hoje</h3>
+                
+                {(() => {
+                  const vendasDoDia = obterVendasDoDia()
+                  const totaisPorPagamento = calcularTotaisPorPagamento()
+                  const totalGeral = vendasDoDia.reduce((acc, v) => acc + v.valorTotal, 0)
                   
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-semibold text-gray-800">Total do Dia:</span>
-                      <span className="text-2xl font-bold text-green-600">
-                        {formatarMoeda(Object.values(calcularTotaisPorPagamento()).reduce((acc, dados) => acc + dados.valor, 0))}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Estoque Atual */}
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Meu Estoque</h3>
-                  <div className="space-y-3">
-                    {obterEstoqueVendedor().map((estoque) => {
-                      const quantidadeVendida = calcularQuantidadeVendida(estoque.produtoId)
-                      return (
-                        <div key={estoque.id} className="p-3 bg-gray-50 rounded-lg">
-                          <div className="font-medium text-gray-800">{estoque.produtoNome}</div>
-                          <div className="grid grid-cols-3 gap-2 mt-2 text-sm">
-                            <div>
-                              <span className="text-gray-500">Levado:</span>
-                              <div className="font-medium">{estoque.quantidadeLevada}</div>
-                            </div>
-                            <div>
-                              <span className="text-gray-500">Vendido:</span>
-                              <div className="font-medium text-green-600">{quantidadeVendida}</div>
-                            </div>
-                            <div>
-                              <span className="text-gray-500">Devolver:</span>
-                              <div className="font-medium text-orange-600">{estoque.quantidadeLevada - quantidadeVendida}</div>
-                            </div>
+                  return (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div className="bg-blue-50 p-4 rounded-lg">
+                          <div className="text-sm text-blue-600 mb-1">Total de Vendas</div>
+                          <div className="text-2xl font-bold text-blue-700">{vendasDoDia.length}</div>
+                        </div>
+                        
+                        <div className="bg-green-50 p-4 rounded-lg">
+                          <div className="text-sm text-green-600 mb-1">Faturamento Total</div>
+                          <div className="text-2xl font-bold text-green-700">{formatarMoeda(totalGeral)}</div>
+                        </div>
+                        
+                        <div className="bg-purple-50 p-4 rounded-lg">
+                          <div className="text-sm text-purple-600 mb-1">Produtos Vendidos</div>
+                          <div className="text-2xl font-bold text-purple-700">
+                            {vendasDoDia.reduce((acc, v) => acc + v.quantidade, 0)}
                           </div>
                         </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              </div>
+                      </div>
 
-              {/* Vendas Detalhadas do Dia */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Vendas Detalhadas de Hoje</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantidade</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pagamento</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {obterVendasDoDia().map((venda) => {
-                        const cliente = clientes.find(c => c.id === venda.clienteId)
-                        const produto = produtos.find(p => p.id === venda.produtoId)
-                        return (
-                          <tr key={venda.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {cliente?.nomeEmpresa}
-                            </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {produto?.nome}
-                            </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {venda.quantidade}
-                            </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                              {formatarMoeda(venda.valorTotal)}
-                            </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {venda.formaPagamento}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-800 mb-3">Por Forma de Pagamento</h4>
+                        <div className="space-y-2">
+                          {formasPagamento.map((forma) => (
+                            <div key={forma} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                              <span className="font-medium text-gray-700">{forma}</span>
+                              <div className="text-right">
+                                <div className="font-bold text-gray-800">
+                                  {formatarMoeda(totaisPorPagamento[forma]?.valor || 0)}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {totaisPorPagamento[forma]?.quantidade || 0} unidades
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )
+                })()}
               </div>
             </div>
           )}
 
-          {/* Fechamento do Dia Admin */}
+          {/* FECHAMENTO DO DIA - ADMIN */}
           {abaSelecionada === 'fechamentoDiaAdmin' && usuarioLogado?.tipo === 'admin' && (
             <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <h2 className="text-2xl font-bold text-gray-800">Fechamento do Dia - Admin</h2>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex gap-2">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Data Inicial</label>
-                      <input
-                        type="date"
-                        value={dataInicialFechamento}
-                        onChange={(e) => setDataInicialFechamento(e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Data Final</label>
-                      <input
-                        type="date"
-                        value={dataFinalFechamento}
-                        onChange={(e) => setDataFinalFechamento(e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                      />
-                    </div>
-                  </div>
+              <h2 className="text-2xl font-bold text-gray-800">Fechamento do Dia</h2>
+              
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Vendedor</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Vendedor</label>
                     <select
                       value={vendedorFechamento}
                       onChange={(e) => setVendedorFechamento(e.target.value)}
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="">Selecione um vendedor</option>
-                      {vendedoresAtivos.map(vendedor => (
+                      {vendedoresAtivos.map((vendedor) => (
                         <option key={vendedor} value={vendedor}>{vendedor}</option>
                       ))}
                     </select>
                   </div>
-                </div>
-              </div>
 
-              {vendedorFechamento && (
-                <div className="space-y-6">
-                  {/* Resumo de Vendas do Vendedor por Período */}
-                  <div className="bg-white rounded-lg shadow p-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                      Vendas de {vendedorFechamento} - {formatarData(dataInicialFechamento)} a {formatarData(dataFinalFechamento)}
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      {Object.entries(calcularTotaisPorPagamentoPeriodoVendedor(vendedorFechamento, dataInicialFechamento, dataFinalFechamento)).map(([forma, dados]) => (
-                        <div key={forma} className="p-4 bg-gray-50 rounded-lg">
-                          <div className="font-medium text-gray-800">{forma}</div>
-                          <div className="text-sm text-gray-500">{dados.quantidade} vendas</div>
-                          <div className="text-lg font-bold text-green-600">
-                            {formatarMoeda(dados.valor)}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Data Inicial</label>
+                    <input
+                      type="date"
+                      value={dataInicialFechamento}
+                      onChange={(e) => setDataInicialFechamento(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Data Final</label>
+                    <input
+                      type="date"
+                      value={dataFinalFechamento}
+                      onChange={(e) => setDataFinalFechamento(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                {vendedorFechamento && (
+                  <div className="space-y-6">
+                    {(() => {
+                      const vendasPeriodo = obterVendasPorPeriodoVendedor(vendedorFechamento, dataInicialFechamento, dataFinalFechamento)
+                      const totaisPorPagamento = calcularTotaisPorPagamentoPeriodoVendedor(vendedorFechamento, dataInicialFechamento, dataFinalFechamento)
+                      const totalGeral = vendasPeriodo.reduce((acc, v) => acc + v.valorTotal, 0)
+                      
+                      return (
+                        <>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="bg-blue-50 p-4 rounded-lg">
+                              <div className="text-sm text-blue-600 mb-1">Total de Vendas</div>
+                              <div className="text-2xl font-bold text-blue-700">{vendasPeriodo.length}</div>
+                            </div>
+                            
+                            <div className="bg-green-50 p-4 rounded-lg">
+                              <div className="text-sm text-green-600 mb-1">Faturamento Total</div>
+                              <div className="text-2xl font-bold text-green-700">{formatarMoeda(totalGeral)}</div>
+                            </div>
+                            
+                            <div className="bg-purple-50 p-4 rounded-lg">
+                              <div className="text-sm text-purple-600 mb-1">Produtos Vendidos</div>
+                              <div className="text-2xl font-bold text-purple-700">
+                                {vendasPeriodo.reduce((acc, v) => acc + v.quantidade, 0)}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    <div className="mt-4 pt-4 border-t">
-                      <div className="flex justify-between items-center">
-                        <span className="text-lg font-semibold text-gray-800">Total do Período:</span>
-                        <span className="text-2xl font-bold text-green-600">
-                          {formatarMoeda(Object.values(calcularTotaisPorPagamentoPeriodoVendedor(vendedorFechamento, dataInicialFechamento, dataFinalFechamento)).reduce((acc, dados) => acc + dados.valor, 0))}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Estoque do Vendedor */}
-                  <div className="bg-white rounded-lg shadow p-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                      Estoque - {vendedorFechamento}
-                    </h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Levado</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendido</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">A Devolver</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {obterEstoqueVendedorEspecifico(vendedorFechamento).map((estoque) => {
-                            const quantidadeVendida = calcularQuantidadeVendidaVendedor(vendedorFechamento, estoque.produtoId)
-                            return (
-                              <tr key={estoque.id} className="hover:bg-gray-50">
-                                <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                  {estoque.produtoNome}
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {estoque.quantidadeLevada}
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
-                                  {quantidadeVendida}
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-orange-600 font-medium">
-                                  {estoque.quantidadeLevada - quantidadeVendida}
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {formatarData(estoque.data)}
-                                </td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                          <div>
+                            <h4 className="font-semibold text-gray-800 mb-3">Por Forma de Pagamento</h4>
+                            <div className="space-y-2">
+                              {formasPagamento.map((forma) => (
+                                <div key={forma} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                  <span className="font-medium text-gray-700">{forma}</span>
+                                  <div className="text-right">
+                                    <div className="font-bold text-gray-800">
+                                      {formatarMoeda(totaisPorPagamento[forma]?.valor || 0)}
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                      {totaisPorPagamento[forma]?.quantidade || 0} unidades
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )
+                    })()}
                   </div>
+                )}
 
-                  {/* Vendas Detalhadas por Período */}
-                  <div className="bg-white rounded-lg shadow p-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                      Vendas Detalhadas - {vendedorFechamento}
-                    </h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantidade</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pagamento</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {obterVendasPorPeriodoVendedor(vendedorFechamento, dataInicialFechamento, dataFinalFechamento).map((venda) => {
-                            const cliente = clientes.find(c => c.id === venda.clienteId)
-                            const produto = produtos.find(p => p.id === venda.produtoId)
-                            return (
-                              <tr key={venda.id} className="hover:bg-gray-50">
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {formatarData(venda.data)}
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {cliente?.nomeEmpresa}
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {produto?.nome}
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {venda.quantidade}
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                                  {formatarMoeda(venda.valorTotal)}
-                                </td>
-                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {venda.formaPagamento}
-                                </td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                {!vendedorFechamento && (
+                  <div className="text-center py-12">
+                    <Clock className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">Selecione um vendedor e período para ver o fechamento</p>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
 
-          {/* Controle de Estoque (Admin) */}
+          {/* CONTROLE DE ESTOQUE - VENDEDOR */}
+          {abaSelecionada === 'controleEstoque' && usuarioLogado?.tipo === 'vendedor' && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-gray-800">Meu Estoque</h2>
+              
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Produtos em Estoque</h3>
+                
+                {obterEstoqueVendedor().length === 0 ? (
+                  <div className="text-center py-12">
+                    <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">Nenhum produto em estoque</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {obterEstoqueVendedor().map((estoque) => (
+                      <div key={estoque.id} className="border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h4 className="font-semibold text-gray-800">{estoque.produtoNome}</h4>
+                            <p className="text-sm text-gray-600">Data: {formatarData(estoque.data)}</p>
+                          </div>
+                          <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            estoque.status === 'ativo' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {estoque.status === 'ativo' ? 'Ativo' : 'Finalizado'}
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                          <div>
+                            <div className="text-2xl font-bold text-blue-600">{estoque.quantidadeLevada}</div>
+                            <div className="text-xs text-gray-600">Levado</div>
+                          </div>
+                          <div>
+                            <div className="text-2xl font-bold text-green-600">{calcularQuantidadeVendida(estoque.produtoId)}</div>
+                            <div className="text-xs text-gray-600">Vendido</div>
+                          </div>
+                          <div>
+                            <div className="text-2xl font-bold text-orange-600">
+                              {estoque.quantidadeLevada - calcularQuantidadeVendida(estoque.produtoId)}
+                            </div>
+                            <div className="text-xs text-gray-600">A Devolver</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* CONTROLE DE ESTOQUE - ADMIN */}
           {abaSelecionada === 'controleEstoque' && usuarioLogado?.tipo === 'admin' && (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h2 className="text-2xl font-bold text-gray-800">Controle de Estoque</h2>
                 <button
                   onClick={() => setMostrarControleEstoque(true)}
-                  className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
+                  className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
                 >
                   <Plus className="w-4 h-4" />
                   Adicionar Estoque
                 </button>
               </div>
 
-              <div className="bg-white rounded-lg shadow overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendedor</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Levado</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendido</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">A Devolver</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {estoqueVendedores.map((estoque) => {
-                        const quantidadeVendida = calcularQuantidadeVendidaVendedor(estoque.vendedorNome, estoque.produtoId)
-                        return (
-                          <tr key={estoque.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <User className="w-5 h-5 text-gray-400 mr-3" />
-                                <div className="text-sm font-medium text-gray-900">{estoque.vendedorNome}</div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {estoque.produtoNome}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {estoque.quantidadeLevada}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
-                              {quantidadeVendida}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-orange-600 font-medium">
-                              {estoque.quantidadeLevada - quantidadeVendida}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {formatarData(estoque.data)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                estoque.status === 'ativo' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                              }`}>
-                                {estoque.status === 'ativo' ? 'Ativo' : 'Finalizado'}
-                              </span>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Modal Adicionar Estoque */}
-          {mostrarControleEstoque && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Adicionar Estoque para Vendedor</h3>
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Estoque por Vendedor</h3>
                 
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Vendedor</label>
-                    <select
-                      value={novoEstoque.vendedorId}
-                      onChange={(e) => setNovoEstoque({...novoEstoque, vendedorId: parseInt(e.target.value)})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value={0}>Selecione um vendedor</option>
-                      {usuarios.filter(u => u.tipo === 'vendedor' && u.ativo).map(vendedor => (
-                        <option key={vendedor.id} value={vendedor.id}>{vendedor.nome}</option>
-                      ))}
-                    </select>
+                {estoqueVendedores.filter(e => e.status === 'ativo').length === 0 ? (
+                  <div className="text-center py-12">
+                    <Truck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">Nenhum estoque ativo</p>
                   </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Produto</label>
-                    <select
-                      value={novoEstoque.produtoId}
-                      onChange={(e) => setNovoEstoque({...novoEstoque, produtoId: parseInt(e.target.value)})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value={0}>Selecione um produto</option>
-                      {produtos.map(produto => (
-                        <option key={produto.id} value={produto.id}>{produto.nome}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Quantidade Levada</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={novoEstoque.quantidadeLevada}
-                      onChange={(e) => setNovoEstoque({...novoEstoque, quantidadeLevada: parseInt(e.target.value) || 0})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Quantidade"
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex justify-end gap-3 mt-6">
-                  <button
-                    onClick={() => {
-                      setMostrarControleEstoque(false)
-                      setNovoEstoque({ vendedorId: 0, produtoId: 0, quantidadeLevada: 0 })
-                    }}
-                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={adicionarEstoqueVendedor}
-                    className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
-                  >
-                    Adicionar
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Meu Estoque (Vendedor) */}
-          {abaSelecionada === 'controleEstoque' && usuarioLogado?.tipo === 'vendedor' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-800">Meu Estoque</h2>
-
-              <div className="bg-white rounded-lg shadow overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Levado</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendido</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">A Devolver</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {obterEstoqueVendedor().map((estoque) => {
-                        const quantidadeVendida = calcularQuantidadeVendida(estoque.produtoId)
-                        return (
-                          <tr key={estoque.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <Package className="w-5 h-5 text-gray-400 mr-3" />
-                                <div className="text-sm font-medium text-gray-900">{estoque.produtoNome}</div>
+                ) : (
+                  <div className="space-y-6">
+                    {vendedoresAtivos.map((vendedor) => {
+                      const estoqueVendedor = obterEstoqueVendedorEspecifico(vendedor)
+                      if (estoqueVendedor.length === 0) return null
+                      
+                      return (
+                        <div key={vendedor} className="border border-gray-200 rounded-lg p-4">
+                          <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                            <User className="w-5 h-5 text-blue-500" />
+                            {vendedor}
+                          </h4>
+                          
+                          <div className="space-y-3">
+                            {estoqueVendedor.map((estoque) => (
+                              <div key={estoque.id} className="bg-gray-50 rounded-lg p-3">
+                                <div className="flex items-start justify-between mb-2">
+                                  <div>
+                                    <h5 className="font-medium text-gray-800">{estoque.produtoNome}</h5>
+                                    <p className="text-xs text-gray-600">Data: {formatarData(estoque.data)}</p>
+                                  </div>
+                                </div>
+                                
+                                <div className="grid grid-cols-3 gap-3 text-center text-sm">
+                                  <div>
+                                    <div className="text-xl font-bold text-blue-600">{estoque.quantidadeLevada}</div>
+                                    <div className="text-xs text-gray-600">Levado</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-xl font-bold text-green-600">
+                                      {calcularQuantidadeVendidaVendedor(vendedor, estoque.produtoId)}
+                                    </div>
+                                    <div className="text-xs text-gray-600">Vendido</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-xl font-bold text-orange-600">
+                                      {estoque.quantidadeLevada - calcularQuantidadeVendidaVendedor(vendedor, estoque.produtoId)}
+                                    </div>
+                                    <div className="text-xs text-gray-600">A Devolver</div>
+                                  </div>
+                                </div>
                               </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {estoque.quantidadeLevada}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
-                              {quantidadeVendida}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-orange-600 font-medium">
-                              {estoque.quantidadeLevada - quantidadeVendida}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {formatarData(estoque.data)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                estoque.status === 'ativo' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                              }`}>
-                                {estoque.status === 'ativo' ? 'Ativo' : 'Finalizado'}
-                              </span>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Notas a Receber (Admin) */}
-          {abaSelecionada === 'notasReceber' && usuarioLogado?.tipo === 'admin' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-800">Notas a Receber</h2>
-
-              <div className="bg-white rounded-lg shadow overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Número da Nota</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendedor</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {obterNotasAReceber().map((venda) => {
-                        const cliente = clientes.find(c => c.id === venda.clienteId)
-                        const produto = produtos.find(p => p.id === venda.produtoId)
-                        return (
-                          <tr key={venda.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {formatarData(venda.data)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">{cliente?.nomeEmpresa}</div>
-                              <div className="text-sm text-gray-500">{cliente?.responsavelCompra}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {produto?.nome}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <FileText className="w-4 h-4 text-gray-400 mr-2" />
-                                <span className="text-sm font-medium text-gray-900">{venda.numeroNota}</span>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                              {formatarMoeda(venda.valorTotal)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {venda.vendedorResponsavel}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                venda.statusPagamento === 'Pago' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {venda.statusPagamento === 'Pago' ? 'Pago' : 'Pendente'}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                              {venda.statusPagamento === 'Pendente' && (
-                                <button
-                                  onClick={() => marcarNotaComoPaga(venda.id)}
-                                  className="text-green-600 hover:text-green-900 flex items-center gap-1"
-                                >
-                                  <CheckCircle className="w-4 h-4" />
-                                  Marcar como Pago
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                {obterNotasAReceber().length === 0 && (
-                  <div className="text-center py-8">
-                    <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">Nenhuma nota pendente encontrada</p>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>
+            </div>
+          )}
 
-              {/* Resumo das Notas */}
+          {/* NOTAS A RECEBER (ADMIN) */}
+          {abaSelecionada === 'notasReceber' && usuarioLogado?.tipo === 'admin' && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-gray-800">Notas a Receber</h2>
+              
               <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Resumo das Notas a Receber</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-yellow-600">
-                      {obterNotasAReceber().length}
-                    </div>
-                    <div className="text-sm text-gray-600">Notas Pendentes</div>
+                {obterNotasAReceber().length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">Nenhuma nota pendente</p>
                   </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-green-600">
-                      {formatarMoeda(obterNotasAReceber().reduce((acc, venda) => acc + venda.valorTotal, 0))}
-                    </div>
-                    <div className="text-sm text-gray-600">Valor Total a Receber</div>
+                ) : (
+                  <div className="space-y-4">
+                    {obterNotasAReceber().map((venda) => {
+                      const cliente = clientes.find(c => c.id === venda.clienteId)
+                      const produto = produtos.find(p => p.id === venda.produtoId)
+                      
+                      return (
+                        <div key={venda.id} className="border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <h4 className="font-semibold text-gray-800">Nota: {venda.numeroNota}</h4>
+                              <p className="text-sm text-gray-600">{cliente?.nomeEmpresa}</p>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-green-600">{formatarMoeda(venda.valorTotal)}</div>
+                              <div className="text-xs text-gray-500">{formatarData(venda.data)}</div>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2 text-sm mb-3">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Produto:</span>
+                              <span className="font-medium">{produto?.nome}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Quantidade:</span>
+                              <span className="font-medium">{venda.quantidade}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Vendedor:</span>
+                              <span className="font-medium">{venda.vendedorResponsavel}</span>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => marcarNotaComoPaga(venda.id)}
+                            className="w-full bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            Marcar como Paga
+                          </button>
+                        </div>
+                      )
+                    })}
                   </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-blue-600">
-                      {vendas.filter(v => v.formaPagamento === 'Nota Feita' && v.statusPagamento === 'Pago').length}
-                    </div>
-                    <div className="text-sm text-gray-600">Notas Pagas</div>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           )}
 
-          {/* Configurações (Admin) */}
+          {/* NOTAS A RECEBER (VENDEDOR) */}
+          {abaSelecionada === 'notasReceber' && usuarioLogado?.tipo === 'vendedor' && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-gray-800">Minhas Notas a Receber</h2>
+              
+              <div className="bg-white rounded-lg shadow p-6">
+                {obterNotasAReceberVendedor().length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">Nenhuma nota pendente</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {obterNotasAReceberVendedor().map((venda) => {
+                      const cliente = clientes.find(c => c.id === venda.clienteId)
+                      const produto = produtos.find(p => p.id === venda.produtoId)
+                      
+                      return (
+                        <div key={venda.id} className="border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <h4 className="font-semibold text-gray-800">Nota: {venda.numeroNota}</h4>
+                              <p className="text-sm text-gray-600">{cliente?.nomeEmpresa}</p>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-green-600">{formatarMoeda(venda.valorTotal)}</div>
+                              <div className="text-xs text-gray-500">{formatarData(venda.data)}</div>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2 text-sm mb-3">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Produto:</span>
+                              <span className="font-medium">{produto?.nome}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Quantidade:</span>
+                              <span className="font-medium">{venda.quantidade}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Status:</span>
+                              <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                                Aguardando Pagamento
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-sm text-blue-800">
+                            <AlertCircle className="w-4 h-4 inline mr-2" />
+                            Apenas o administrador pode dar baixa nesta nota
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* CONFIGURAÇÕES (ADMIN) */}
           {abaSelecionada === 'configuracoes' && usuarioLogado?.tipo === 'admin' && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-800">Configurações do Sistema</h2>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Status do Sistema */}
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Status do Sistema</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Database className="w-5 h-5 text-blue-500" />
-                        <span className="text-gray-700">Banco de Dados</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${
-                          statusBanco === 'conectado' ? 'bg-green-500' : 'bg-yellow-500'
-                        }`}></div>
-                        <span className="text-sm text-gray-600">
-                          {statusBanco === 'conectado' ? 'Conectado' : 'Local'}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Users className="w-5 h-5 text-green-500" />
-                        <span className="text-gray-700">Usuários Ativos</span>
-                      </div>
-                      <span className="text-sm font-medium text-gray-900">
-                        {usuarios.filter(u => u.ativo).length}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Building2 className="w-5 h-5 text-purple-500" />
-                        <span className="text-gray-700">Total de Clientes</span>
-                      </div>
-                      <span className="text-sm font-medium text-gray-900">
-                        {clientes.length}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Package className="w-5 h-5 text-orange-500" />
-                        <span className="text-gray-700">Produtos Cadastrados</span>
-                      </div>
-                      <span className="text-sm font-medium text-gray-900">
-                        {produtos.length}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Configurações Gerais */}
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Configurações Gerais</h3>
-                  <div className="space-y-4">
-                    <button
-                      onClick={() => setMostrarConfigBanco(true)}
-                      className="w-full flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Database className="w-5 h-5 text-blue-500" />
-                        <span className="text-gray-700">Configurar Banco de Dados</span>
-                      </div>
-                      <Settings className="w-4 h-4 text-gray-400" />
-                    </button>
-                    
-                    <div className="p-3 border border-gray-200 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Shield className="w-5 h-5 text-green-500" />
-                          <span className="text-gray-700">Backup Automático</span>
-                        </div>
-                        <span className="text-sm text-green-600 font-medium">Ativo</span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Dados salvos automaticamente no localStorage
-                      </p>
-                    </div>
-                    
-                    <div className="p-3 border border-gray-200 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <AlertCircle className="w-5 h-5 text-yellow-500" />
-                          <span className="text-gray-700">Modo de Desenvolvimento</span>
-                        </div>
-                        <span className="text-sm text-yellow-600 font-medium">Ativo</span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Sistema rodando em modo local para testes
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Estatísticas Gerais */}
+              <h2 className="text-2xl font-bold text-gray-800">Configurações</h2>
+              
               <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Estatísticas Gerais</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-blue-600">
-                      {vendas.length}
-                    </div>
-                    <div className="text-sm text-gray-600">Total de Vendas</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-green-600">
-                      {formatarMoeda(vendas.reduce((acc, v) => acc + v.valorTotal, 0))}
-                    </div>
-                    <div className="text-sm text-gray-600">Faturamento Total</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-purple-600">
-                      {usuarios.filter(u => u.tipo === 'vendedor' && u.ativo).length}
-                    </div>
-                    <div className="text-sm text-gray-600">Vendedores Ativos</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-orange-600">
-                      {obterNotasAReceber().length}
-                    </div>
-                    <div className="text-sm text-gray-600">Notas Pendentes</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Modal Configuração do Banco */}
-          {mostrarConfigBanco && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Configuração do Banco de Dados</h3>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Sistema</h3>
                 
                 <div className="space-y-4">
-                  <div className="p-4 bg-blue-50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Database className="w-5 h-5 text-blue-500" />
-                      <span className="font-medium text-blue-800">Status Atual</span>
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <div className="font-medium text-gray-800">Status do Sistema</div>
+                      <div className="text-sm text-gray-600">Sistema funcionando em modo local</div>
                     </div>
-                    <p className="text-sm text-blue-700">
-                      Sistema funcionando em modo local com localStorage para persistência de dados.
-                    </p>
-                  </div>
-                  
-                  <div className="p-4 bg-green-50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                      <span className="font-medium text-green-800">Funcionalidades Ativas</span>
+                    <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      statusBanco === 'conectado' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {statusBanco === 'conectado' ? 'Online' : 'Local'}
                     </div>
-                    <ul className="text-sm text-green-700 space-y-1">
-                      <li>• Salvamento automático</li>
-                      <li>• Backup local</li>
-                      <li>• Sincronização em tempo real</li>
-                    </ul>
                   </div>
-                  
-                  <div className="p-4 bg-yellow-50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertCircle className="w-5 h-5 text-yellow-500" />
-                      <span className="font-medium text-yellow-800">Próximas Atualizações</span>
+
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <div className="font-medium text-gray-800">Total de Usuários</div>
+                      <div className="text-sm text-gray-600">{usuarios.length} usuários cadastrados</div>
                     </div>
-                    <p className="text-sm text-yellow-700">
-                      Integração com banco de dados em nuvem será implementada em versões futuras.
-                    </p>
+                    <div className="text-2xl font-bold text-blue-600">{usuarios.length}</div>
                   </div>
-                </div>
-                
-                <div className="flex justify-end gap-3 mt-6">
-                  <button
-                    onClick={() => setMostrarConfigBanco(false)}
-                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    Fechar
-                  </button>
+
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <div className="font-medium text-gray-800">Total de Clientes</div>
+                      <div className="text-sm text-gray-600">{clientes.length} clientes cadastrados</div>
+                    </div>
+                    <div className="text-2xl font-bold text-green-600">{clientes.length}</div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <div className="font-medium text-gray-800">Total de Produtos</div>
+                      <div className="text-sm text-gray-600">{produtos.length} produtos cadastrados</div>
+                    </div>
+                    <div className="text-2xl font-bold text-purple-600">{produtos.length}</div>
+                  </div>
                 </div>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Modais (mantidos iguais) */}
+      {/* Modal de Adicionar Vendedor (Admin) */}
+      {mostrarAdicionarVendedor && usuarioLogado?.tipo === 'admin' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Adicionar Novo Vendedor</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nome Completo</label>
+                <input
+                  type="text"
+                  value={novoVendedor.nome}
+                  onChange={(e) => setNovoVendedor({...novoVendedor, nome: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Nome do vendedor"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <input
+                  type="email"
+                  value={novoVendedor.email}
+                  onChange={(e) => setNovoVendedor({...novoVendedor, email: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="email@exemplo.com"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Senha</label>
+                <input
+                  type="text"
+                  value={novoVendedor.senha}
+                  onChange={(e) => setNovoVendedor({...novoVendedor, senha: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Senha inicial"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Comissão (%)</label>
+                <input
+                  type="number"
+                  value={novoVendedor.comissao}
+                  onChange={(e) => setNovoVendedor({...novoVendedor, comissao: parseInt(e.target.value) || 0})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="5"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setMostrarAdicionarVendedor(false)
+                  setNovoVendedor({ nome: '', email: '', senha: '', comissao: 5 })
+                }}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={adicionarVendedor}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+              >
+                Adicionar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Editar Vendedor */}
+      {vendedorEditando && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Editar Vendedor</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nome Completo</label>
+                <input
+                  type="text"
+                  value={dadosEdicaoVendedor.nome}
+                  onChange={(e) => setDadosEdicaoVendedor({...dadosEdicaoVendedor, nome: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <input
+                  type="email"
+                  value={dadosEdicaoVendedor.email}
+                  onChange={(e) => setDadosEdicaoVendedor({...dadosEdicaoVendedor, email: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Comissão (%)</label>
+                <input
+                  type="number"
+                  value={dadosEdicaoVendedor.comissao}
+                  onChange={(e) => setDadosEdicaoVendedor({...dadosEdicaoVendedor, comissao: parseInt(e.target.value) || 0})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setVendedorEditando(null)
+                  setDadosEdicaoVendedor({ nome: '', email: '', comissao: 5 })
+                }}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={salvarEdicaoVendedor}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Trocar Senha do Vendedor */}
+      {vendedorTrocandoSenha && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              Trocar Senha - {vendedorTrocandoSenha.nome}
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nova Senha</label>
+                <input
+                  type="text"
+                  value={novaSenhaVendedor}
+                  onChange={(e) => setNovaSenhaVendedor(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Digite a nova senha"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Confirmar Nova Senha</label>
+                <input
+                  type="text"
+                  value={confirmarNovaSenha}
+                  onChange={(e) => setConfirmarNovaSenha(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Confirme a nova senha"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setVendedorTrocandoSenha(null)
+                  setNovaSenhaVendedor('')
+                  setConfirmarNovaSenha('')
+                }}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={trocarSenhaVendedor}
+                className="px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600"
+              >
+                Trocar Senha
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Editar Cliente */}
+      {clienteEditando && dadosEdicaoCliente && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl my-8">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Editar Cliente</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nome da Empresa</label>
+                <input
+                  type="text"
+                  value={dadosEdicaoCliente.nomeEmpresa}
+                  onChange={(e) => setDadosEdicaoCliente({...dadosEdicaoCliente, nomeEmpresa: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Responsável</label>
+                <input
+                  type="text"
+                  value={dadosEdicaoCliente.responsavelCompra}
+                  onChange={(e) => setDadosEdicaoCliente({...dadosEdicaoCliente, responsavelCompra: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <input
+                  type="email"
+                  value={dadosEdicaoCliente.email}
+                  onChange={(e) => setDadosEdicaoCliente({...dadosEdicaoCliente, email: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Telefone</label>
+                <input
+                  type="tel"
+                  value={dadosEdicaoCliente.telefone}
+                  onChange={(e) => setDadosEdicaoCliente({...dadosEdicaoCliente, telefone: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Endereço</label>
+                <input
+                  type="text"
+                  value={dadosEdicaoCliente.endereco}
+                  onChange={(e) => setDadosEdicaoCliente({...dadosEdicaoCliente, endereco: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Cidade</label>
+                <input
+                  type="text"
+                  value={dadosEdicaoCliente.cidade}
+                  onChange={(e) => setDadosEdicaoCliente({...dadosEdicaoCliente, cidade: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+                <input
+                  type="text"
+                  value={dadosEdicaoCliente.estado}
+                  onChange={(e) => setDadosEdicaoCliente({...dadosEdicaoCliente, estado: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  maxLength={2}
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setClienteEditando(null)
+                  setDadosEdicaoCliente(null)
+                }}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={salvarEdicaoCliente}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Alterar Rota */}
+      {clienteAlterandoRota && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              Alterar Dias de Visita - {clienteAlterandoRota.nomeEmpresa}
+            </h3>
+            
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600">Selecione os dias de visita:</p>
+              <div className="flex flex-wrap gap-2">
+                {diasSemana.map((dia) => (
+                  <button
+                    key={dia}
+                    onClick={() => toggleDiaRota(dia)}
+                    className={`px-4 py-2 rounded-md transition-colors ${
+                      novosDiasVisita.includes(dia)
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    {dia}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setClienteAlterandoRota(null)
+                  setNovosDiasVisita([])
+                }}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={salvarAlteracaoRota}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Adicionar Estoque (Admin) */}
+      {mostrarControleEstoque && usuarioLogado?.tipo === 'admin' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Adicionar Estoque para Vendedor</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Vendedor</label>
+                <select
+                  value={novoEstoque.vendedorId}
+                  onChange={(e) => setNovoEstoque({...novoEstoque, vendedorId: parseInt(e.target.value)})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value={0}>Selecione um vendedor</option>
+                  {usuarios.filter(u => u.tipo === 'vendedor' && u.ativo).map((vendedor) => (
+                    <option key={vendedor.id} value={vendedor.id}>{vendedor.nome}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Produto</label>
+                <select
+                  value={novoEstoque.produtoId}
+                  onChange={(e) => setNovoEstoque({...novoEstoque, produtoId: parseInt(e.target.value)})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value={0}>Selecione um produto</option>
+                  {produtos.map((produto) => (
+                    <option key={produto.id} value={produto.id}>{produto.nome}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Quantidade</label>
+                <input
+                  type="number"
+                  value={novoEstoque.quantidadeLevada}
+                  onChange={(e) => setNovoEstoque({...novoEstoque, quantidadeLevada: parseInt(e.target.value) || 0})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setMostrarControleEstoque(false)
+                  setNovoEstoque({ vendedorId: 0, produtoId: 0, quantidadeLevada: 0 })
+                }}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={adicionarEstoqueVendedor}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+              >
+                Adicionar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Edição de Produto */}
+      {produtoEditando && dadosEdicaoProduto && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Editar Produto</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nome do Produto</label>
+                <input
+                  type="text"
+                  value={dadosEdicaoProduto.nome}
+                  onChange={(e) => setDadosEdicaoProduto({...dadosEdicaoProduto, nome: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Preço</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={dadosEdicaoProduto.preco}
+                    onChange={(e) => setDadosEdicaoProduto({...dadosEdicaoProduto, preco: parseFloat(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Estoque</label>
+                  <input
+                    type="number"
+                    value={dadosEdicaoProduto.estoque}
+                    onChange={(e) => setDadosEdicaoProduto({...dadosEdicaoProduto, estoque: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
+                <input
+                  type="text"
+                  value={dadosEdicaoProduto.categoria}
+                  onChange={(e) => setDadosEdicaoProduto({...dadosEdicaoProduto, categoria: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+                <textarea
+                  value={dadosEdicaoProduto.descricao}
+                  onChange={(e) => setDadosEdicaoProduto({...dadosEdicaoProduto, descricao: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows={3}
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setProdutoEditando(null)
+                  setDadosEdicaoProduto(null)
+                }}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={salvarEdicaoProduto}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
