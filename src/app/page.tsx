@@ -87,16 +87,7 @@ export default function ControleClientesVendas() {
   // Estados de autenticação
   const [usuarioLogado, setUsuarioLogado] = useState<Usuario | null>(null)
   const [telaLogin, setTelaLogin] = useState(true)
-  const [tipoLogin, setTipoLogin] = useState<'admin' | 'vendedor'>('admin')
   const [dadosLogin, setDadosLogin] = useState({ email: '', senha: '' })
-  const [mostrarCriarConta, setMostrarCriarConta] = useState(false)
-  const [dadosCriarConta, setDadosCriarConta] = useState({
-    nome: '',
-    email: '',
-    senha: '',
-    confirmarSenha: '',
-    tipo: 'vendedor' as 'admin' | 'vendedor'
-  })
 
   // Estados para filtros de relatórios (vendedor)
   const [dataInicialRelatorio, setDataInicialRelatorio] = useState<string>(new Date().toISOString().split('T')[0])
@@ -110,6 +101,14 @@ export default function ControleClientesVendas() {
     email: '',
     senha: '',
     comissao: 5
+  })
+
+  // Estados para adicionar admin (admin)
+  const [mostrarAdicionarAdmin, setMostrarAdicionarAdmin] = useState(false)
+  const [novoAdmin, setNovoAdmin] = useState({
+    nome: '',
+    email: '',
+    senha: ''
   })
 
   // Estados para editar vendedor
@@ -174,13 +173,13 @@ export default function ControleClientesVendas() {
   // Estados para carrinho de compras
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([])
 
-  // Usuários do sistema
+  // Usuários do sistema - APENAS ADMIN FIXO
   const [usuarios, setUsuarios] = useState<Usuario[]>([
     {
       id: 1,
       nome: 'Admin',
-      email: 'admin',
-      senha: 'admin',
+      email: 'paodequeijomeufavorito@gmail.com',
+      senha: 'giovanin',
       tipo: 'admin',
       ativo: true,
       dataRegistro: '2024-01-01'
@@ -903,8 +902,7 @@ export default function ControleClientesVendas() {
   const fazerLogin = () => {
     const usuario = usuarios.find(u => 
       u.email === dadosLogin.email && 
-      u.senha === dadosLogin.senha && 
-      u.tipo === tipoLogin
+      u.senha === dadosLogin.senha
     )
 
     if (!usuario) {
@@ -921,45 +919,6 @@ export default function ControleClientesVendas() {
     setTelaLogin(false)
     setDadosLogin({ email: '', senha: '' })
     setStatusBanco('conectado')
-  }
-
-  // Função para criar conta
-  const criarConta = () => {
-    if (!dadosCriarConta.nome || !dadosCriarConta.email || !dadosCriarConta.senha) {
-      alert('Todos os campos são obrigatórios')
-      return
-    }
-
-    if (dadosCriarConta.senha !== dadosCriarConta.confirmarSenha) {
-      alert('As senhas não coincidem')
-      return
-    }
-
-    if (usuarios.find(u => u.email === dadosCriarConta.email)) {
-      alert('Este email já está cadastrado')
-      return
-    }
-
-    const novoUsuario: Usuario = {
-      id: usuarios.length + 1,
-      nome: dadosCriarConta.nome,
-      email: dadosCriarConta.email,
-      senha: dadosCriarConta.senha,
-      tipo: dadosCriarConta.tipo,
-      ativo: dadosCriarConta.tipo === 'admin' ? true : false,
-      dataRegistro: new Date().toISOString().split('T')[0],
-      comissao: dadosCriarConta.tipo === 'vendedor' ? 5 : undefined
-    }
-
-    setUsuarios([...usuarios, novoUsuario])
-    setDadosCriarConta({ nome: '', email: '', senha: '', confirmarSenha: '', tipo: 'vendedor' })
-    setMostrarCriarConta(false)
-    
-    if (dadosCriarConta.tipo === 'admin') {
-      alert('Conta de administrador criada com sucesso!')
-    } else {
-      alert('Conta criada com sucesso! Aguarde a ativação pelo administrador.')
-    }
   }
 
   // Função de logout
@@ -1000,6 +959,37 @@ export default function ControleClientesVendas() {
     setNovoVendedor({ nome: '', email: '', senha: '', comissao: 5 })
     setMostrarAdicionarVendedor(false)
     alert(`Vendedor ${vendedor.nome} adicionado com sucesso!\nEmail: ${vendedor.email}\nSenha: ${vendedor.senha}`)
+  }
+
+  // Função para adicionar admin (apenas admin)
+  const adicionarAdmin = () => {
+    if (usuarioLogado?.tipo !== 'admin') return
+    
+    if (!novoAdmin.nome || !novoAdmin.email || !novoAdmin.senha) {
+      alert('Todos os campos são obrigatórios')
+      return
+    }
+
+    if (usuarios.find(u => u.email === novoAdmin.email)) {
+      alert('Este email já está cadastrado')
+      return
+    }
+
+    const admin: Usuario = {
+      id: usuarios.length + 1,
+      nome: novoAdmin.nome,
+      email: novoAdmin.email,
+      senha: novoAdmin.senha,
+      tipo: 'admin',
+      ativo: true,
+      dataRegistro: new Date().toISOString().split('T')[0],
+      criadoPor: usuarioLogado.nome
+    }
+
+    setUsuarios([...usuarios, admin])
+    setNovoAdmin({ nome: '', email: '', senha: '' })
+    setMostrarAdicionarAdmin(false)
+    alert(`Administrador ${admin.nome} adicionado com sucesso!\nEmail: ${admin.email}\nSenha: ${admin.senha}`)
   }
 
   // Função para alternar status do vendedor (apenas admin)
@@ -1385,178 +1375,36 @@ export default function ControleClientesVendas() {
             <p className="text-gray-600">Sistema de Vendas</p>
           </div>
 
-          {!mostrarCriarConta ? (
-            <>
-              {/* Seletor de Tipo de Login */}
-              <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
-                <button
-                  onClick={() => setTipoLogin('admin')}
-                  className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
-                    tipoLogin === 'admin'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-600'
-                  }`}
-                >
-                  <Shield className="w-4 h-4 inline mr-2" />
-                  Admin
-                </button>
-                <button
-                  onClick={() => setTipoLogin('vendedor')}
-                  className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
-                    tipoLogin === 'vendedor'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-600'
-                  }`}
-                >
-                  <User className="w-4 h-4 inline mr-2" />
-                  Vendedor
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                  <input
-                    type="text"
-                    value={dadosLogin.email}
-                    onChange={(e) => setDadosLogin({...dadosLogin, email: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    placeholder="Digite seu email"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Senha</label>
-                  <input
-                    type="password"
-                    value={dadosLogin.senha}
-                    onChange={(e) => setDadosLogin({...dadosLogin, senha: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    placeholder="Digite sua senha"
-                  />
-                </div>
-
-                <button
-                  onClick={fazerLogin}
-                  className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 px-4 rounded-xl font-medium hover:from-blue-600 hover:to-indigo-700 transition-all transform hover:scale-[1.02]"
-                >
-                  Entrar
-                </button>
-              </div>
-
-              {/* Opções de Conta */}
-              <div className="mt-6 space-y-3">
-                <button
-                  onClick={() => setMostrarCriarConta(true)}
-                  className="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-700 py-3 px-4 rounded-xl font-medium hover:bg-gray-200 transition-all"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  Criar Conta
-                </button>
-              </div>
-            </>
-          ) : (
-            /* Formulário de Criar Conta */
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
-                <button
-                  onClick={() => setMostrarCriarConta(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-                <h3 className="text-lg font-semibold text-gray-800">Criar Nova Conta</h3>
-              </div>
-
-              {/* Seletor de Tipo de Conta */}
-              <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
-                <button
-                  onClick={() => setDadosCriarConta({...dadosCriarConta, tipo: 'vendedor'})}
-                  className={`flex-1 py-2 px-3 rounded-lg font-medium transition-all text-sm ${
-                    dadosCriarConta.tipo === 'vendedor'
-                      ? 'bg-white text-green-600 shadow-sm'
-                      : 'text-gray-600'
-                  }`}
-                >
-                  <User className="w-4 h-4 inline mr-2" />
-                  Vendedor
-                </button>
-                <button
-                  onClick={() => setDadosCriarConta({...dadosCriarConta, tipo: 'admin'})}
-                  className={`flex-1 py-2 px-3 rounded-lg font-medium transition-all text-sm ${
-                    dadosCriarConta.tipo === 'admin'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-600'
-                  }`}
-                >
-                  <Shield className="w-4 h-4 inline mr-2" />
-                  Admin
-                </button>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Nome Completo</label>
-                <input
-                  type="text"
-                  value={dadosCriarConta.nome}
-                  onChange={(e) => setDadosCriarConta({...dadosCriarConta, nome: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="Digite seu nome completo"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                <input
-                  type="email"
-                  value={dadosCriarConta.email}
-                  onChange={(e) => setDadosCriarConta({...dadosCriarConta, email: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="Digite seu email"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Senha</label>
-                <input
-                  type="password"
-                  value={dadosCriarConta.senha}
-                  onChange={(e) => setDadosCriarConta({...dadosCriarConta, senha: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="Digite sua senha"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Confirmar Senha</label>
-                <input
-                  type="password"
-                  value={dadosCriarConta.confirmarSenha}
-                  onChange={(e) => setDadosCriarConta({...dadosCriarConta, confirmarSenha: e.target.value})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="Confirme sua senha"
-                />
-              </div>
-
-              <button
-                onClick={criarConta}
-                className={`w-full py-3 px-4 rounded-xl font-medium transition-all transform hover:scale-[1.02] ${
-                  dadosCriarConta.tipo === 'admin'
-                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white'
-                    : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white'
-                }`}
-              >
-                Criar Conta {dadosCriarConta.tipo === 'admin' ? 'de Administrador' : 'de Vendedor'}
-              </button>
-
-              <p className="text-xs text-gray-500 text-center mt-4">
-                {dadosCriarConta.tipo === 'admin' 
-                  ? 'Sua conta de administrador será ativada imediatamente.'
-                  : 'Sua conta será criada como vendedor e precisará ser ativada pelo administrador.'
-                }
-              </p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <input
+                type="text"
+                value={dadosLogin.email}
+                onChange={(e) => setDadosLogin({...dadosLogin, email: e.target.value})}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                placeholder="Digite seu email"
+              />
             </div>
-          )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Senha</label>
+              <input
+                type="password"
+                value={dadosLogin.senha}
+                onChange={(e) => setDadosLogin({...dadosLogin, senha: e.target.value})}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                placeholder="Digite sua senha"
+              />
+            </div>
+
+            <button
+              onClick={fazerLogin}
+              className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 px-4 rounded-xl font-medium hover:from-blue-600 hover:to-indigo-700 transition-all transform hover:scale-[1.02]"
+            >
+              Entrar
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -2799,13 +2647,22 @@ export default function ControleClientesVendas() {
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h2 className="text-2xl font-bold text-gray-800">Gerenciar Usuários</h2>
-                <button
-                  onClick={() => setMostrarAdicionarVendedor(true)}
-                  className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  Adicionar Vendedor
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setMostrarAdicionarVendedor(true)}
+                    className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Adicionar Vendedor
+                  </button>
+                  <button
+                    onClick={() => setMostrarAdicionarAdmin(true)}
+                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Adicionar Admin
+                  </button>
+                </div>
               </div>
 
               <div className="bg-white rounded-lg shadow p-6">
@@ -3439,7 +3296,7 @@ export default function ControleClientesVendas() {
         </div>
       </div>
 
-      {/* Modais (mantidos iguais) */}
+      {/* Modais */}
       {/* Modal de Adicionar Vendedor (Admin) */}
       {mostrarAdicionarVendedor && usuarioLogado?.tipo === 'admin' && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -3504,6 +3361,68 @@ export default function ControleClientesVendas() {
               </button>
               <button
                 onClick={adicionarVendedor}
+                className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
+              >
+                Adicionar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Adicionar Admin (Admin) */}
+      {mostrarAdicionarAdmin && usuarioLogado?.tipo === 'admin' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Adicionar Novo Administrador</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nome Completo</label>
+                <input
+                  type="text"
+                  value={novoAdmin.nome}
+                  onChange={(e) => setNovoAdmin({...novoAdmin, nome: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Nome do administrador"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <input
+                  type="email"
+                  value={novoAdmin.email}
+                  onChange={(e) => setNovoAdmin({...novoAdmin, email: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="email@exemplo.com"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Senha</label>
+                <input
+                  type="text"
+                  value={novoAdmin.senha}
+                  onChange={(e) => setNovoAdmin({...novoAdmin, senha: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Senha inicial"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setMostrarAdicionarAdmin(false)
+                  setNovoAdmin({ nome: '', email: '', senha: '' })
+                }}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={adicionarAdmin}
                 className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
               >
                 Adicionar
